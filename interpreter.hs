@@ -2,6 +2,18 @@ import System.Environment
 import System.IO
 import Control.Monad.Except
 
+import Syntax.ParSyntax (pProg, myLexer)
+import Syntax.AbsSyntax
+
+
+interpret :: String -> IO ()
+interpret programString = do
+  case pProg (myLexer programString) of
+    Left err -> print err
+    Right tree -> print "SUccess!"
+
+
+
 
 getProgramPath :: IO String
 getProgramPath = do
@@ -16,4 +28,4 @@ main = do
   programPath <- getProgramPath
   withFile programPath ReadMode (\handle -> do
     program <- hGetContents handle
-    print program)
+    interpret program)
