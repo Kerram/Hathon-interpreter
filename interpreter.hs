@@ -6,11 +6,23 @@ import Syntax.ParSyntax (pProg, myLexer)
 import Syntax.AbsSyntax
 
 
+evalExp :: Exp () -> Integer
+evalExp (EAdd _ exp1 exp2) = (evalExp exp1) + (evalExp exp2)
+evalExp (EDiv _ exp1 exp2) = (evalExp exp1) `div` (evalExp exp2)
+evalExp (EMul _ exp1 exp2) = (evalExp exp1) * (evalExp exp2)
+evalExp (EInt _ x) = x
+
+
+evalProgram :: Prog () -> Integer
+evalProgram (PEmpty _) = 0
+evalProgram (PDef _ _ _) = 0
+evalProgram (PExp _ exp1 _) = evalExp exp1
+
 interpret :: String -> IO ()
 interpret programString = do
   case pProg (myLexer programString) of
     Left err -> print err
-    Right tree -> print "SUccess!"
+    Right tree -> print $ evalProgram tree
 
 
 
