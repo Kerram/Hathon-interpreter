@@ -1,30 +1,53 @@
 import System.Environment
 import System.IO
 import Control.Monad.Except
+import Data.Maybe
 
 import Syntax.ParSyntax (pProg, myLexer)
 import Syntax.AbsSyntax
+import Syntax.ErrM
 
 
-evalExp :: Exp () -> Integer
-evalExp (EAdd _ exp1 exp2) = (evalExp exp1) + (evalExp exp2)
-evalExp (EDiv _ exp1 exp2) = (evalExp exp1) `div` (evalExp exp2)
-evalExp (EMul _ exp1 exp2) = (evalExp exp1) * (evalExp exp2)
-evalExp (EInt _ x) = x
+evalExp :: Exp (Maybe (Int, Int)) -> Either String Integer
+evalExp (EAdd _ exp1 exp2) = do
+  value1 <- evalExp exp1
+  value2 <- evalExp exp2
+  return $ value1 + value2
+
+evalExp (EDiv position exp1 exp2) = do
+  value1 <- evalExp exp1
+  value2 <- evalExp exp2
+  if value2 == 0 then
+    let (line, col) = fromJust position in
+    Left $ "ERROR: You cannot divide by 0!!!" ++ "Line: " ++ (show line) ++ "Column: " ++ (show col)
+  else
+    return $ value1 `div` value2
+
+evalExp (EMul _ exp1 exp2) = do
+  value1 <- evalExp exp1
+  value2 <- evalExp exp2
+  return $ value1 * value2
+
+evalExp (EInt _ x) = return x
 
 
-evalProgram :: Prog () -> IO ()
+evalProgram :: Prog (Maybe (Int, Int)) -> ExceptT String IO ()
 evalProgram (PEmpty _) = return ()
 evalProgram (PDef _ _ _) = return ()
 evalProgram (PExp _ exp1 prog) = do
-  putStrLn $ show $ evalExp exp1
+  value <- liftEither $ evalExp exp1
+  liftIO $ print value
   evalProgram prog
 
 interpret :: String -> IO ()
 interpret programString = do
   case pProg (myLexer programString) of
-    Left err -> print err
-    Right tree -> evalProgram tree
+    Bad err -> print err
+    Ok tree -> do
+      result <- runExceptT (evalProgram tree)
+      case result of
+        Left err -> print err
+        Right _ -> return ()
 
 
 
