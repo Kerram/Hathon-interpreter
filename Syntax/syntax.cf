@@ -1,0 +1,67 @@
+-- Programs -------------------------
+
+entrypoints Prog;
+
+PDef. Prog ::= Def ";" Prog;
+PExp. Prog ::= Exp ";" Prog;
+PEmpty. Prog ::= ;
+
+
+-- Expressions -------------------------
+EIf. Exp ::= "if" Exp "then" Exp "else" Exp;
+ELet. Exp ::= "let" Def "in" Exp;
+ELambda. Exp ::= "lambda" "::" Type "." [Ident] "->" Exp;
+
+EOr. Exp1 ::= Exp2 "||" Exp1;
+
+EAnd. Exp2 ::= Exp3 "&&" Exp2;
+
+EEqu. Exp3 ::= Exp3 "==" Exp4;
+EGre. Exp3 ::= Exp3 ">" Exp4;
+EGeq. Exp3 ::= Exp3 ">=" Exp4;
+ELes. Exp3 ::= Exp3 "<" Exp4;
+ELeq. Exp3 ::= Exp3 "<=" Exp4;
+ENeq. Exp3 ::= Exp3 "!=" Exp4;
+
+ELAppend. Exp4 ::= Exp5 ":" Exp4;
+
+ESub. Exp5 ::= Exp5 "-" Exp6;
+EAdd. Exp5 ::= Exp5 "+" Exp6;
+
+EDiv. Exp6 ::= Exp6 "//" Exp7;
+EMul. Exp6 ::= Exp6 "*" Exp7;
+
+EBNeg. Exp7 ::= "!" Exp8;
+ENeg. Exp7 ::= "-" Exp8;
+
+EApp. Exp8 ::= Ident Args;
+ArgList. Args ::= Exp9 Args;
+ArgBase. Args ::= Exp9;
+
+EInt. Exp9 ::= Integer;
+ETrue. Exp9 ::= "True";
+EFalse. Exp9 ::= "False";
+EVar. Exp9 ::= Ident;
+EList. Exp9 ::= "[" [Exp] "]";
+separator Exp ",";
+
+coercions Exp 9;
+
+
+-- Types -------------------------------
+TFun. Type ::= Type1 "->" Type;
+TInt. Type1 ::= "Int";
+TBool. Type1 ::= "Bool";
+TList. Type1 ::= "[" Type "]";
+
+coercions Type 1;
+
+
+-- Definitions -------------------------
+DFun. Def ::= "def" Ident "::" Type [Ident] "=" Exp;
+terminator Ident "";
+
+
+-- Comments ----------------------------
+comment "#";
+comment "/*" "*/";
