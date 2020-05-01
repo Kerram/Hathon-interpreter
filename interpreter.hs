@@ -13,16 +13,18 @@ evalExp (EMul _ exp1 exp2) = (evalExp exp1) * (evalExp exp2)
 evalExp (EInt _ x) = x
 
 
-evalProgram :: Prog () -> Integer
-evalProgram (PEmpty _) = 0
-evalProgram (PDef _ _ _) = 0
-evalProgram (PExp _ exp1 _) = evalExp exp1
+evalProgram :: Prog () -> IO ()
+evalProgram (PEmpty _) = return ()
+evalProgram (PDef _ _ _) = return ()
+evalProgram (PExp _ exp1 prog) = do
+  putStrLn $ show $ evalExp exp1
+  evalProgram prog
 
 interpret :: String -> IO ()
 interpret programString = do
   case pProg (myLexer programString) of
     Left err -> print err
-    Right tree -> print $ evalProgram tree
+    Right tree -> evalProgram tree
 
 
 
