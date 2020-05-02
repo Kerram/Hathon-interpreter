@@ -59,6 +59,10 @@ evalExp (EApp _ fName args@(ArgBase _ expr)) = do
     Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show fName) ++ "not declared"
     Just (Right (FunValue fun)) -> applyArgs fun args
 
+evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
+  env <- ask
+  local (M.insert name $ runReaderT (evalDef def) env) (evalExp expr)
+
 
 applyArgs :: (ExpValue -> Either String ExpValue) -> Args (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
 applyArgs fun (ArgList _ expr args) = do
