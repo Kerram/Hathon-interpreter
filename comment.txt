@@ -1,0 +1,6 @@
+# To jest jednolinijkowy komentarz.
+/* To jest
+def bzdura;
+i komentarz wielolinijkowy (nie moze byc zagniezdzony).
+*/
+1 + 2;

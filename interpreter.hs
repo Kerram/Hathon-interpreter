@@ -47,13 +47,28 @@ evalExp (EVar _ name) = do
     Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show name) ++ "not declared"
     Just value -> liftEither value
 
-evalExp (EApp _ fName (ArgBase _ expr)) = do
+evalExp (EApp _ fName args@(ArgList _ expr _)) = do
   env <- ask
   case M.lookup fName env of
     Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show fName) ++ "not declared"
-    Just (Right (FunValue fun)) -> do
-      paramValue <- evalExp expr
-      liftEither $ fun paramValue
+    Just (Right (FunValue fun)) -> applyArgs fun args
+
+evalExp (EApp _ fName args@(ArgBase _ expr)) = do
+  env <- ask
+  case M.lookup fName env of
+    Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show fName) ++ "not declared"
+    Just (Right (FunValue fun)) -> applyArgs fun args
+
+
+applyArgs :: (ExpValue -> Either String ExpValue) -> Args (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
+applyArgs fun (ArgList _ expr args) = do
+  paramValue <- evalExp expr
+  fun2 <- liftEither $ fun paramValue; let (FunValue unpackedFun) = fun2
+  applyArgs unpackedFun args
+
+applyArgs fun (ArgBase _ expr) = do
+  paramValue <- evalExp expr
+  liftEither $ fun paramValue
 
 
 evalDef :: Def (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue

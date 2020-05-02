@@ -5,3 +5,14 @@ x + 10;
 def sum :: Int -> Int x = x + 100;
 sum 10;
 sum x;
+
+
+def sum2 :: Int -> Int -> Int x y = x + y;
+sum2 10 42;
+
+def sum3 :: Int -> Int = sum2 100;
+sum3 1;
+sum3 5;
+
+def sum4 :: Int -> Int x = sum2 100 x;
+sum4 9;
