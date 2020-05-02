@@ -2,16 +2,24 @@ import System.Environment
 import System.IO
 import Control.Monad.Except
 import Data.Maybe
+import Control.Monad.Reader
 
 import Syntax.ParSyntax (pProg, myLexer)
 import Syntax.AbsSyntax
 import Syntax.ErrM
 
+import qualified Data.Map as M
+import Data.Either
+
+
+type Env = M.Map Ident (Either String ExpValue)
+
+
 
 data ExpValue = IntValue Integer | BoolValue Bool
 
 
-evalExp :: Exp (Maybe (Int, Int)) -> Either String ExpValue
+evalExp :: Exp (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
 evalExp (EAdd _ exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
@@ -22,7 +30,7 @@ evalExp (EDiv position exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
     let (line, col) = fromJust position in
-    Left $ "ERROR: You cannot divide by 0!!!" ++ "Line: " ++ (show line) ++ "Column: " ++ (show col)
+    liftEither $ Left $ "ERROR: You cannot divide by 0!!!" ++ "Line: " ++ (show line) ++ "Column: " ++ (show col)
   else
     return $ IntValue (value1 `div` value2)
 
@@ -33,13 +41,29 @@ evalExp (EMul _ exp1 exp2) = do
 
 evalExp (EInt _ x) = return $ IntValue x
 evalExp (ETrue _) = return $ BoolValue True
+evalExp (EVar _ name) = do
+  env <- ask
+  case M.lookup name env of
+    Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show name) ++ "not declared"
+    Just value -> liftEither value
 
 
-evalProgram :: Prog (Maybe (Int, Int)) -> ExceptT String IO ()
+evalDef :: Def (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
+evalDef def@(DFun _ name _ _ expr) = do
+  env <- ask
+  local (M.insert name $ runReaderT (evalDef def) env) (evalExp expr)
+
+
+evalProgram :: Prog (Maybe (Int, Int)) -> ReaderT Env (ExceptT String IO) ()
 evalProgram (PEmpty _) = return ()
-evalProgram (PDef _ _ _) = return ()
+evalProgram (PDef _ def@(DFun _ name _ _ _) prog) = do
+  env <- ask
+  definition <- liftEither $ runReaderT (evalDef def) env
+  local (M.insert name $ Right definition) (evalProgram prog)
+
 evalProgram (PExp _ exp1 prog) = do
-  value <- liftEither $ evalExp exp1
+  env <- ask
+  value <- liftEither $ runReaderT (evalExp exp1) env
   case value of
     IntValue x -> liftIO $ print x
     BoolValue x -> liftIO $ print x
@@ -50,7 +74,7 @@ interpret programString = do
   case pProg (myLexer programString) of
     Bad err -> print err
     Ok tree -> do
-      result <- runExceptT (evalProgram tree)
+      result <- runExceptT $ runReaderT (evalProgram tree) M.empty
       case result of
         Left err -> print err
         Right _ -> return ()
