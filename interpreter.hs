@@ -16,7 +16,7 @@ type Env = M.Map Ident (Either String ExpValue)
 
 
 
-data ExpValue = IntValue Integer | BoolValue Bool
+data ExpValue = IntValue Integer | BoolValue Bool | FunValue (ExpValue -> Either String ExpValue)
 
 
 evalExp :: Exp (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
@@ -47,11 +47,30 @@ evalExp (EVar _ name) = do
     Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show name) ++ "not declared"
     Just value -> liftEither value
 
+evalExp (EApp _ fName (ArgBase _ expr)) = do
+  env <- ask
+  case M.lookup fName env of
+    Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show fName) ++ "not declared"
+    Just (Right (FunValue fun)) -> do
+      paramValue <- evalExp expr
+      liftEither $ fun paramValue
+
 
 evalDef :: Def (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
+evalDef def@(DFun _ name (TFun _ paramType returnType) (param:rest) expr) = do
+  env <- ask
+  local (M.insert name $ runReaderT (evalDef def) env) (do
+    env2 <- ask
+    return $ FunValue (\paramValue -> runReaderT (do
+        local (M.insert param $ Right paramValue) (evalDef (DFun (Just (1, 1)) name returnType rest expr))
+          ) env2
+        )
+    )
+
 evalDef def@(DFun _ name _ _ expr) = do
   env <- ask
   local (M.insert name $ runReaderT (evalDef def) env) (evalExp expr)
+
 
 
 evalProgram :: Prog (Maybe (Int, Int)) -> ReaderT Env (ExceptT String IO) ()
