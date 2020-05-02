@@ -8,27 +8,31 @@ import Syntax.AbsSyntax
 import Syntax.ErrM
 
 
-evalExp :: Exp (Maybe (Int, Int)) -> Either String Integer
+data ExpValue = IntValue Integer | BoolValue Bool
+
+
+evalExp :: Exp (Maybe (Int, Int)) -> Either String ExpValue
 evalExp (EAdd _ exp1 exp2) = do
-  value1 <- evalExp exp1
-  value2 <- evalExp exp2
-  return $ value1 + value2
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ IntValue (value1 + value2)
 
 evalExp (EDiv position exp1 exp2) = do
-  value1 <- evalExp exp1
-  value2 <- evalExp exp2
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
     let (line, col) = fromJust position in
     Left $ "ERROR: You cannot divide by 0!!!" ++ "Line: " ++ (show line) ++ "Column: " ++ (show col)
   else
-    return $ value1 `div` value2
+    return $ IntValue (value1 `div` value2)
 
 evalExp (EMul _ exp1 exp2) = do
-  value1 <- evalExp exp1
-  value2 <- evalExp exp2
-  return $ value1 * value2
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ IntValue (value1 * value2)
 
-evalExp (EInt _ x) = return x
+evalExp (EInt _ x) = return $ IntValue x
+evalExp (ETrue _) = return $ BoolValue True
 
 
 evalProgram :: Prog (Maybe (Int, Int)) -> ExceptT String IO ()
@@ -36,7 +40,9 @@ evalProgram (PEmpty _) = return ()
 evalProgram (PDef _ _ _) = return ()
 evalProgram (PExp _ exp1 prog) = do
   value <- liftEither $ evalExp exp1
-  liftIO $ print value
+  case value of
+    IntValue x -> liftIO $ print x
+    BoolValue x -> liftIO $ print x
   evalProgram prog
 
 interpret :: String -> IO ()
