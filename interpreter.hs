@@ -16,7 +16,10 @@ type Env = M.Map Ident (Either String ExpValue)
 
 
 
-data ExpValue = IntValue Integer | BoolValue Bool | FunValue (ExpValue -> Either String ExpValue)
+data ExpValue = IntValue Integer
+                | BoolValue Bool
+                | FunValue (ExpValue -> Either String ExpValue)
+                | ListValue [ExpValue]
 
 
 evalExp :: Exp (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
@@ -63,6 +66,22 @@ evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
   env <- ask
   local (M.insert name $ runReaderT (evalDef def) env) (evalExp expr)
 
+evalExp (EList _ list) = do
+  elements <- mapM (\expr -> evalExp expr) list
+  return $ ListValue elements
+
+evalExp (EIf _ condition thenExp elseExp) = do
+  goOrNo <- evalExp condition; let (BoolValue unpackedGoOrNo) = goOrNo
+  if unpackedGoOrNo then
+    evalExp thenExp
+  else
+    evalExp elseExp
+
+evalExp (EGre _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (value1 < value2)
+
 
 applyArgs :: (ExpValue -> Either String ExpValue) -> Args (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
 applyArgs fun (ArgList _ expr args) = do
@@ -105,6 +124,8 @@ evalProgram (PExp _ exp1 prog) = do
   case value of
     IntValue x -> liftIO $ print x
     BoolValue x -> liftIO $ print x
+    FunValue _ -> liftEither $ Left $ "ERROR: Cannot display value of functional type!"
+    ListValue x -> liftIO $ print "List"
   evalProgram prog
 
 interpret :: String -> IO ()
