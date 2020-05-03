@@ -30,20 +30,22 @@ evalProgram (PExp (Just (line, column)) expr prog) = do
 
 
 evalDef :: Bool -> Def (Maybe (Int, Int)) -> ExpMonad
-evalDef outer def@(DFun _ name (TFun _ paramType returnType) (param:rest) expr) = do
+evalDef enableRecursion def@(DFun position name (TFun _ paramType returnType) (param:paramsTail) expr) = do
   env <- ask
-  local (\mapa -> if outer then (M.insert name $ runReaderT (evalDef True def) env) mapa else mapa) (do
-    env2 <- ask
-    return $ FunValue (\paramValue -> runReaderT (do
-        local (M.insert param $ Right paramValue) (evalDef False (DFun (Just (1, 1)) name returnType rest expr))
-          ) env2
-        )
-    )
+  if enableRecursion then local (M.insert name $ runReaderT (evalDef True def) env) partialApplication
+                     else partialApplication
+  where
+    partialApplication = do
+      env2 <- ask
+      return $ FunValue (\paramValue -> runReaderT (do
+          local (M.insert param $ Right paramValue) (evalDef False (DFun position name returnType paramsTail expr))
+            ) env2
+          )
 
-evalDef outer def@(DFun _ name _ _ expr) = do
+evalDef enableRecursion def@(DFun _ name _ _ expr) = do
   env <- ask
-  if outer then local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
-           else evalExp expr
+  if enableRecursion then local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
+                     else evalExp expr
 
 
 evalExp :: Exp (Maybe (Int, Int)) -> ExpMonad
@@ -74,18 +76,6 @@ evalExp (EVar _ name) = do
   case M.lookup name env of
     Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show name) ++ "not declared"
     Just value -> liftEither value
-
-evalExp (EApp _ fName args@(ArgList _ expr _)) = do
-  env <- ask
-  case M.lookup fName env of
-    Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show fName) ++ "not declared"
-    Just (Right (FunValue fun)) -> applyArgs fun args
-
-evalExp (EApp _ fName args@(ArgBase _ expr)) = do
-  env <- ask
-  case M.lookup fName env of
-    Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show fName) ++ "not declared"
-    Just (Right (FunValue fun)) -> applyArgs fun args
 
 evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
   env <- ask
@@ -125,12 +115,27 @@ evalExp (ENeg _ expr) = do
   packedValue1 <- evalExp expr; let (IntValue value1) = packedValue1
   return $ IntValue (-value1)
 
+-- TODO code duplication
+evalExp (EApp (Just (line, column)) (Ident fName) args@(ArgList _ expr _)) = do
+  env <- ask
+  case M.lookup (Ident fName) env of
+    Nothing -> liftEither $ Left $ "ERROR: Function " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
+    Just (Left errorMsg) -> liftEither $ Left errorMsg
+    Just (Right (FunValue fun)) -> applyArgs fun args
+
+evalExp (EApp (Just (line, column)) (Ident fName) args@(ArgBase _ expr)) = do
+  env <- ask
+  case M.lookup (Ident fName) env of
+    Nothing -> liftEither $ Left $ "ERROR: Function " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
+    Just (Left errorMsg) -> liftEither $ Left errorMsg
+    Just (Right (FunValue fun)) -> applyArgs fun args
+
 
 applyArgs :: HathonFunction -> Args (Maybe (Int, Int)) -> ExpMonad
 applyArgs fun (ArgList _ expr args) = do
   paramValue <- evalExp expr
-  fun2 <- liftEither $ fun paramValue; let (FunValue unpackedFun) = fun2
-  applyArgs unpackedFun args
+  packedPartialApp <- liftEither $ fun paramValue; let (FunValue partialApp) = packedPartialApp
+  applyArgs partialApp args
 
 applyArgs fun (ArgBase _ expr) = do
   paramValue <- evalExp expr
