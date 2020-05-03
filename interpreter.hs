@@ -42,6 +42,24 @@ data ExpValue = IntValue Integer
                 | ListValue [ExpValue]
 
 
+showSExpValue :: ExpValue -> Either String ShowS
+showSExpValue (IntValue value) = return $ shows value
+showSExpValue (BoolValue value) = return $ shows value
+showSExpValue (FunValue _) = Left $ "ERROR: Cannot display functional type!"
+showSExpValue (ListValue value) = do
+  innerRepr <- help value
+  return $ (showString "[") . (innerRepr) . (showString "]")
+  where
+    help :: [ExpValue] -> Either String ShowS
+    help [] = return $ showString ""
+    help (h:t) = do
+      headRepr <- showSExpValue h
+      tailRepr <- help t
+      return $ headRepr . showString ", " . tailRepr
+
+
+
+
 evalExp :: Exp (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
 evalExp (EAdd _ exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
@@ -152,11 +170,8 @@ evalProgram (PDef _ def@(DFun _ name _ _ _) prog) = do
 evalProgram (PExp _ exp1 prog) = do
   env <- ask
   value <- liftEither $ runReaderT (evalExp exp1) env
-  case value of
-    IntValue x -> liftIO $ print x
-    BoolValue x -> liftIO $ print x
-    FunValue _ -> liftEither $ Left $ "ERROR: Cannot display value of functional type!"
-    ListValue x -> liftIO $ print "List"
+  valueRepr <- liftEither $ showSExpValue value
+  liftIO $ print $ valueRepr ""
   evalProgram prog
 
 interpret :: String -> IO ()
