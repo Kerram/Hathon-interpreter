@@ -8,14 +8,16 @@ import InterpreterTypes
 
 
 predefinedHead :: HathonFunction
-predefinedHead (ListValue (h:t)) = Right h
+predefinedHead (ListValue []) = Left $ "ERROR: Function head cannot be applied to an empty list!"
+predefinedHead (ListValue (h:_)) = Right h
 
 predefinedEmpty :: HathonFunction
 predefinedEmpty (ListValue []) = Right (BoolValue True)
-predefinedEmpty (ListValue (h:t)) = Right (BoolValue False)
+predefinedEmpty (ListValue _) = Right (BoolValue False)
 
 predefinedTail :: HathonFunction
-predefinedTail (ListValue (h:t)) = Right (ListValue t)
+predefinedTail (ListValue []) = Left $ "ERROR: Function tail cannot be applied to an empty list!"
+predefinedTail (ListValue (_:t)) = Right (ListValue t)
 
 predefinedEnv :: Env
 predefinedEnv = M.fromList [(Ident "head", Right $ FunValue predefinedHead),
