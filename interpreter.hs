@@ -12,6 +12,26 @@ import qualified Data.Map as M
 import Data.Either
 
 
+
+
+predefinedHead :: ExpValue -> Either String ExpValue
+predefinedHead (ListValue (h:t)) = Right h
+
+predefinedEmpty :: ExpValue -> Either String ExpValue
+predefinedEmpty (ListValue []) = Right (BoolValue True)
+predefinedEmpty (ListValue (h:t)) = Right (BoolValue False)
+
+predefinedTail :: ExpValue -> Either String ExpValue
+predefinedTail (ListValue (h:t)) = Right (ListValue t)
+
+
+predefinedEnv :: Env
+predefinedEnv = M.fromList [(Ident "head", Right $ FunValue predefinedHead),
+                            (Ident "empty", Right $ FunValue predefinedEmpty),
+                            (Ident "tail", Right $ FunValue predefinedTail)]
+
+
+
 type Env = M.Map Ident (Either String ExpValue)
 
 
@@ -44,6 +64,7 @@ evalExp (EMul _ exp1 exp2) = do
 
 evalExp (EInt _ x) = return $ IntValue x
 evalExp (ETrue _) = return $ BoolValue True
+evalExp (EFalse _) = return $ BoolValue False
 evalExp (EVar _ name) = do
   env <- ask
   case M.lookup name env of
@@ -64,7 +85,7 @@ evalExp (EApp _ fName args@(ArgBase _ expr)) = do
 
 evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
   env <- ask
-  local (M.insert name $ runReaderT (evalDef def) env) (evalExp expr)
+  local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
 
 evalExp (EList _ list) = do
   elements <- mapM (\expr -> evalExp expr) list
@@ -80,8 +101,18 @@ evalExp (EIf _ condition thenExp elseExp) = do
 evalExp (EGre _ exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 < value2)
+  return $ BoolValue (value1 > value2)
 
+
+evalExp (ELAppend _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1
+  packedValue2 <- evalExp exp2; let (ListValue value2) = packedValue2
+  return $ ListValue $ packedValue1:value2
+
+evalExp (EEqu _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (value1 == value2)
 
 applyArgs :: (ExpValue -> Either String ExpValue) -> Args (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
 applyArgs fun (ArgList _ expr args) = do
@@ -94,28 +125,28 @@ applyArgs fun (ArgBase _ expr) = do
   liftEither $ fun paramValue
 
 
-evalDef :: Def (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
-evalDef def@(DFun _ name (TFun _ paramType returnType) (param:rest) expr) = do
+evalDef :: Bool -> Def (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
+evalDef outer def@(DFun _ name (TFun _ paramType returnType) (param:rest) expr) = do
   env <- ask
-  local (M.insert name $ runReaderT (evalDef def) env) (do
+  local (\mapa -> if outer then (M.insert name $ runReaderT (evalDef True def) env) mapa else mapa) (do
     env2 <- ask
     return $ FunValue (\paramValue -> runReaderT (do
-        local (M.insert param $ Right paramValue) (evalDef (DFun (Just (1, 1)) name returnType rest expr))
+        local (M.insert param $ Right paramValue) (evalDef False (DFun (Just (1, 1)) name returnType rest expr))
           ) env2
         )
     )
 
-evalDef def@(DFun _ name _ _ expr) = do
+evalDef outer def@(DFun _ name _ _ expr) = do
   env <- ask
-  local (M.insert name $ runReaderT (evalDef def) env) (evalExp expr)
-
+  if outer then local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
+           else evalExp expr
 
 
 evalProgram :: Prog (Maybe (Int, Int)) -> ReaderT Env (ExceptT String IO) ()
 evalProgram (PEmpty _) = return ()
 evalProgram (PDef _ def@(DFun _ name _ _ _) prog) = do
   env <- ask
-  definition <- liftEither $ runReaderT (evalDef def) env
+  definition <- liftEither $ runReaderT (evalDef True def) env
   local (M.insert name $ Right definition) (evalProgram prog)
 
 evalProgram (PExp _ exp1 prog) = do
@@ -133,7 +164,7 @@ interpret programString = do
   case pProg (myLexer programString) of
     Bad err -> print err
     Ok tree -> do
-      result <- runExceptT $ runReaderT (evalProgram tree) M.empty
+      result <- runExceptT $ runReaderT (evalProgram tree) predefinedEnv
       case result of
         Left err -> print err
         Right _ -> return ()

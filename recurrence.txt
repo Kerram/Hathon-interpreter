@@ -1,0 +1,15 @@
+def add :: Int -> Int acc =
+  if acc == 10 then acc
+  else add (acc + 1);
+
+add 10;
+add 5;
+
+def add2 :: Int -> Int -> Int acc bound =
+  if acc == bound then acc
+  else add2 (acc + 1) bound;
+
+add2 10 10;
+add2 3 5;
+
+def x :: Int = x + 1;

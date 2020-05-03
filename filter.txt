@@ -1,0 +1,25 @@
+def filter :: (Int -> Bool) -> [Int] -> [Int] fun l =
+  if empty l then []
+             else let def h :: Int = head l
+                  in
+                    if fun h then h:filter fun (tail l)
+                             else filter fun (tail l);
+
+def fun :: Int -> Bool x = x > 10;
+
+fun 10;
+fun 20;
+fun 4;
+filter fun [100];
+
+filter fun [1, 5, 10, 20, 40, 24, 4, 52];
+
+
+def length :: [Int] -> Int list =
+  if empty list then 0
+  else 1 + (length (tail list));
+
+
+length (filter fun [100]);
+
+length (filter fun [1, 5, 10, 20, 40, 24, 4, 52]);
