@@ -2,3 +2,5 @@
 *.o
 interpreter
 Pytania.txt
+*.bak
+Makefile
