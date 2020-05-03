@@ -8,6 +8,6 @@ def g :: Int -> Int x = g + (10 // 0);
 def list :: Int -> [Int] x = x:(list x);
 
 def fun :: Int -> Int x = x + (undeclared 2);
-fun 10;
+# fun 10;
 
-head (list 10);
+[5, 63, 4 // 0, head (list 10)];

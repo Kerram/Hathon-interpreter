@@ -1,6 +1,5 @@
 module Eval where
 
-import Data.Maybe
 import Control.Monad.Except
 import Control.Monad.Reader
 import qualified Data.Map as M
@@ -9,6 +8,9 @@ import Syntax.AbsSyntax
 
 import InterpreterTypes
 
+
+lambdaName :: Ident
+lambdaName = Ident "__builtin_lambda_name"
 
 evalProgram :: Prog (Maybe (Int, Int)) -> ProgMonad
 evalProgram (PEmpty _) = return ()
@@ -49,17 +51,84 @@ evalDef enableRecursion def@(DFun _ name _ _ expr) = do
 
 
 evalExp :: Exp (Maybe (Int, Int)) -> ExpMonad
+-- | EEqu a (Exp a) (Exp a) #TODO
+-- | ENeq a (Exp a) (Exp a) #TODO
+
+
+evalExp (EIf _ condition thenExp elseExp) = do
+  packedTrueOrFalse <- evalExp condition; let (BoolValue trueOrFalse) = packedTrueOrFalse
+  if trueOrFalse then
+    evalExp thenExp
+  else
+    evalExp elseExp
+
+evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
+  env <- ask
+  local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
+
+evalExp (ELambda position lambdaType args expr) =
+  evalDef False (DFun position lambdaName lambdaType args expr)
+
+evalExp (EOr _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (BoolValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (BoolValue value2) = packedValue2
+  return $ BoolValue (value1 || value2)
+
+evalExp (EAnd _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (BoolValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (BoolValue value2) = packedValue2
+  return $ BoolValue (value1 && value2)
+
+--evalExp (EEqu _ exp1 exp2) = do
+--  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+--  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+--  return $ BoolValue (value1 == value2)
+
+evalExp (EGre _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (value1 > value2)
+
+evalExp (EGeq _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (value1 >= value2)
+
+evalExp (ELes _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (value1 < value2)
+
+evalExp (ELeq _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (value1 <= value2)
+
+--evalExp (ENeq _ exp1 exp2) = do
+--  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+--  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+--  return $ BoolValue (value1 != value2)
+
+evalExp (ELAppend _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1
+  packedValue2 <- evalExp exp2; let (ListValue value2) = packedValue2
+  return $ ListValue $ packedValue1:value2
+
+evalExp (ESub _ exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ IntValue (value1 - value2)
+
 evalExp (EAdd _ exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   return $ IntValue (value1 + value2)
 
-evalExp (EDiv position exp1 exp2) = do
+evalExp (EDiv (Just (line, column)) exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
-    let (line, col) = fromJust position in
-    liftEither $ Left $ "ERROR: You cannot divide by 0!!!" ++ "Line: " ++ (show line) ++ "Column: " ++ (show col)
+    liftEither $ Left $ "ERROR: Division by 0 at line:" ++ (show line) ++ ", column:" ++ (show column) ++ "."
   else
     return $ IntValue (value1 `div` value2)
 
@@ -68,65 +137,40 @@ evalExp (EMul _ exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   return $ IntValue (value1 * value2)
 
+evalExp (EBNeg _ expr) = do
+  packedValue <- evalExp expr; let (BoolValue value) = packedValue
+  return $ BoolValue (not value)
+
+evalExp (ENeg _ expr) = do
+  packedValue <- evalExp expr; let (IntValue value) = packedValue
+  return $ IntValue (-value)
+
 evalExp (EInt _ x) = return $ IntValue x
 evalExp (ETrue _) = return $ BoolValue True
 evalExp (EFalse _) = return $ BoolValue False
-evalExp (EVar _ name) = do
-  env <- ask
-  case M.lookup name env of
-    Nothing -> liftEither $ Left $ "ERROR: Variable" ++ (show name) ++ "not declared"
-    Just value -> liftEither value
-
-evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
-  env <- ask
-  local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
 
 evalExp (EList _ list) = do
   elements <- mapM (\expr -> evalExp expr) list
   return $ ListValue elements
 
-evalExp (EIf _ condition thenExp elseExp) = do
-  goOrNo <- evalExp condition; let (BoolValue unpackedGoOrNo) = goOrNo
-  if unpackedGoOrNo then
-    evalExp thenExp
-  else
-    evalExp elseExp
-
-evalExp (EGre _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 > value2)
-
-
-evalExp (ELAppend _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1
-  packedValue2 <- evalExp exp2; let (ListValue value2) = packedValue2
-  return $ ListValue $ packedValue1:value2
-
-evalExp (EEqu _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 == value2)
-
-evalExp (ELambda _ lambdaType args expr) = do
-  evalDef True (DFun Nothing (Ident "__buitin_lambda_name") lambdaType args expr)
-
-evalExp (ENeg _ expr) = do
-  packedValue1 <- evalExp expr; let (IntValue value1) = packedValue1
-  return $ IntValue (-value1)
+evalExp (EVar (Just (line, column)) (Ident name)) = do
+  env <- ask
+  case M.lookup (Ident name) env of
+    Nothing -> liftEither $ Left $ "ERROR: Identifier " ++ (show name) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
+    Just value -> liftEither value
 
 -- TODO code duplication
 evalExp (EApp (Just (line, column)) (Ident fName) args@(ArgList _ expr _)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ "ERROR: Function " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
+    Nothing -> liftEither $ Left $ "ERROR: Identifier " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
     Just (Left errorMsg) -> liftEither $ Left errorMsg
     Just (Right (FunValue fun)) -> applyArgs fun args
 
 evalExp (EApp (Just (line, column)) (Ident fName) args@(ArgBase _ expr)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ "ERROR: Function " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
+    Nothing -> liftEither $ Left $ "ERROR: Identifier " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
     Just (Left errorMsg) -> liftEither $ Left errorMsg
     Just (Right (FunValue fun)) -> applyArgs fun args
 
