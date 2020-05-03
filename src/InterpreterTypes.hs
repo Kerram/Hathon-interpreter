@@ -27,12 +27,13 @@ showSExpValue (IntValue value) = return $ shows value
 showSExpValue (BoolValue value) = return $ shows value
 showSExpValue (FunValue _) = Left $ "ERROR: Cannot display functional type!"
 showSExpValue (ListValue value) = do
-  innerRepr <- help value
+  innerRepr <- showSListOfExpValue value
   return $ (showString "[") . (innerRepr) . (showString "]")
   where
-    help :: [ExpValue] -> Error ShowS
-    help [] = return $ showString ""
-    help (h:t) = do
+    showSListOfExpValue :: [ExpValue] -> Error ShowS
+    showSListOfExpValue [] = return $ showString ""
+    showSListOfExpValue (h:[]) = showSExpValue h
+    showSListOfExpValue (h:t) = do
       headRepr <- showSExpValue h
-      tailRepr <- help t
+      tailRepr <- showSListOfExpValue t
       return $ headRepr . showString ", " . tailRepr

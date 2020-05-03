@@ -11,6 +11,6 @@ def map2 :: [[Int] -> [Int]] -> [[Int]] -> [[Int]] fun l =
 
 map tail [[24, 5, 52, 62], [42, 4,52, 52], [42]];
 
-[map, tail];
+/*qwerty*/ [map, tail];
 
 map head [[24, 5, 52, 62], [42, 4,52, 52], [42]];

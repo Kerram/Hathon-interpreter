@@ -12,17 +12,21 @@ import InterpreterTypes
 
 evalProgram :: Prog (Maybe (Int, Int)) -> ProgMonad
 evalProgram (PEmpty _) = return ()
+
 evalProgram (PDef _ def@(DFun _ name _ _ _) prog) = do
   env <- ask
   definition <- liftEither $ runReaderT (evalDef True def) env
   local (M.insert name $ Right definition) (evalProgram prog)
 
-evalProgram (PExp _ exp1 prog) = do
+evalProgram (PExp (Just (line, column)) expr prog) = do
   env <- ask
-  value <- liftEither $ runReaderT (evalExp exp1) env
-  valueRepr <- liftEither $ showSExpValue value
-  liftIO $ print $ valueRepr ""
-  evalProgram prog
+  value <- liftEither $ runReaderT (evalExp expr) env
+  case showSExpValue value of
+    Left erroMsg -> liftEither $
+      Left (erroMsg ++ " This error occured during printing value of expression started at line:" ++ (show line) ++ ", column:" ++ (show column) ++ ".")
+    Right valueRepr -> do
+      liftIO $ putStrLn (valueRepr "")
+      evalProgram prog
 
 
 evalDef :: Bool -> Def (Maybe (Int, Int)) -> ExpMonad
