@@ -13,13 +13,13 @@ import Utils
 
 
 interpret :: String -> IO ()
-interpret programString = do
-  case pProg (myLexer programString) of
-    Bad err -> print err
+interpret program = do
+  case pProg (myLexer program) of
+    Bad errorMsg -> hPutStrLn stderr errorMsg
     Ok tree -> do
       result <- runExceptT $ runReaderT (evalProgram tree) predefinedEnv
       case result of
-        Left err -> print err
+        Left errorMsg -> hPutStrLn stderr errorMsg
         Right _ -> return ()
 
 main :: IO ()
