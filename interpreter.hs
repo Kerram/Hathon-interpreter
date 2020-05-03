@@ -132,6 +132,9 @@ evalExp (EEqu _ exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   return $ BoolValue (value1 == value2)
 
+evalExp (ELambda _ lambdaType args expr) = do
+  evalDef True (DFun Nothing (Ident "__buitin_lambda_name") lambdaType args expr)
+
 applyArgs :: (ExpValue -> Either String ExpValue) -> Args (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
 applyArgs fun (ArgList _ expr args) = do
   paramValue <- evalExp expr
