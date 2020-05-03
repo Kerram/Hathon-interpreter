@@ -10,7 +10,39 @@ import Syntax.AbsSyntax
 import InterpreterTypes
 
 
-evalExp :: Exp (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
+evalProgram :: Prog (Maybe (Int, Int)) -> ProgMonad
+evalProgram (PEmpty _) = return ()
+evalProgram (PDef _ def@(DFun _ name _ _ _) prog) = do
+  env <- ask
+  definition <- liftEither $ runReaderT (evalDef True def) env
+  local (M.insert name $ Right definition) (evalProgram prog)
+
+evalProgram (PExp _ exp1 prog) = do
+  env <- ask
+  value <- liftEither $ runReaderT (evalExp exp1) env
+  valueRepr <- liftEither $ showSExpValue value
+  liftIO $ print $ valueRepr ""
+  evalProgram prog
+
+
+evalDef :: Bool -> Def (Maybe (Int, Int)) -> ExpMonad
+evalDef outer def@(DFun _ name (TFun _ paramType returnType) (param:rest) expr) = do
+  env <- ask
+  local (\mapa -> if outer then (M.insert name $ runReaderT (evalDef True def) env) mapa else mapa) (do
+    env2 <- ask
+    return $ FunValue (\paramValue -> runReaderT (do
+        local (M.insert param $ Right paramValue) (evalDef False (DFun (Just (1, 1)) name returnType rest expr))
+          ) env2
+        )
+    )
+
+evalDef outer def@(DFun _ name _ _ expr) = do
+  env <- ask
+  if outer then local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
+           else evalExp expr
+
+
+evalExp :: Exp (Maybe (Int, Int)) -> ExpMonad
 evalExp (EAdd _ exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
@@ -90,7 +122,7 @@ evalExp (ENeg _ expr) = do
   return $ IntValue (-value1)
 
 
-applyArgs :: (ExpValue -> Either String ExpValue) -> Args (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
+applyArgs :: HathonFunction -> Args (Maybe (Int, Int)) -> ExpMonad
 applyArgs fun (ArgList _ expr args) = do
   paramValue <- evalExp expr
   fun2 <- liftEither $ fun paramValue; let (FunValue unpackedFun) = fun2
@@ -99,35 +131,3 @@ applyArgs fun (ArgList _ expr args) = do
 applyArgs fun (ArgBase _ expr) = do
   paramValue <- evalExp expr
   liftEither $ fun paramValue
-
-
-evalDef :: Bool -> Def (Maybe (Int, Int)) -> ReaderT Env (Either String) ExpValue
-evalDef outer def@(DFun _ name (TFun _ paramType returnType) (param:rest) expr) = do
-  env <- ask
-  local (\mapa -> if outer then (M.insert name $ runReaderT (evalDef True def) env) mapa else mapa) (do
-    env2 <- ask
-    return $ FunValue (\paramValue -> runReaderT (do
-        local (M.insert param $ Right paramValue) (evalDef False (DFun (Just (1, 1)) name returnType rest expr))
-          ) env2
-        )
-    )
-
-evalDef outer def@(DFun _ name _ _ expr) = do
-  env <- ask
-  if outer then local (M.insert name $ runReaderT (evalDef True def) env) (evalExp expr)
-           else evalExp expr
-
-
-evalProgram :: Prog (Maybe (Int, Int)) -> ReaderT Env (ExceptT String IO) ()
-evalProgram (PEmpty _) = return ()
-evalProgram (PDef _ def@(DFun _ name _ _ _) prog) = do
-  env <- ask
-  definition <- liftEither $ runReaderT (evalDef True def) env
-  local (M.insert name $ Right definition) (evalProgram prog)
-
-evalProgram (PExp _ exp1 prog) = do
-  env <- ask
-  value <- liftEither $ runReaderT (evalExp exp1) env
-  valueRepr <- liftEither $ showSExpValue value
-  liftIO $ print $ valueRepr ""
-  evalProgram prog

@@ -7,16 +7,15 @@ import Syntax.AbsSyntax
 import InterpreterTypes
 
 
-predefinedHead :: ExpValue -> Either String ExpValue
+predefinedHead :: HathonFunction
 predefinedHead (ListValue (h:t)) = Right h
 
-predefinedEmpty :: ExpValue -> Either String ExpValue
+predefinedEmpty :: HathonFunction
 predefinedEmpty (ListValue []) = Right (BoolValue True)
 predefinedEmpty (ListValue (h:t)) = Right (BoolValue False)
 
-predefinedTail :: ExpValue -> Either String ExpValue
+predefinedTail :: HathonFunction
 predefinedTail (ListValue (h:t)) = Right (ListValue t)
-
 
 predefinedEnv :: Env
 predefinedEnv = M.fromList [(Ident "head", Right $ FunValue predefinedHead),

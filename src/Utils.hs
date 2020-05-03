@@ -2,6 +2,7 @@ module Utils where
 
 import System.Environment
 
+
 getProgramPath :: IO String
 getProgramPath = do
   args <- getArgs
