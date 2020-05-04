@@ -19,7 +19,7 @@ interpret program = do
     Ok tree -> do
       result <- runExceptT $ runReaderT (evalProgram tree) predefinedEnv
       case result of
-        Left errorMsg -> hPutStrLn stderr errorMsg
+        Left errorMsg -> hPutStrLn stderr (errorMsg "")
         Right _ -> return ()
 
 main :: IO ()

@@ -24,8 +24,9 @@ evalProgram (PExp (Just (line, column)) expr prog) = do
   env <- ask
   value <- liftEither $ runReaderT (evalExp expr) env
   case showSExpValue value of
-    Left erroMsg -> liftEither $
-      Left (erroMsg ++ " This error occured during printing value of expression started at line:" ++ (show line) ++ ", column:" ++ (show column) ++ ".")
+    Left errorMsg -> liftEither $
+      Left (errorMsg . showString "\nThis error occured during printing value of expression started at line:"
+            . shows line . showString ", column:" . shows column . showString ".")
     Right valueRepr -> do
       liftIO $ putStrLn (valueRepr "")
       evalProgram prog
@@ -128,7 +129,7 @@ evalExp (EDiv (Just (line, column)) exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
-    liftEither $ Left $ "ERROR: Division by 0 at line:" ++ (show line) ++ ", column:" ++ (show column) ++ "."
+    liftEither $ Left $ showString "ERROR: Division by 0 at line:" . shows line . showString ", column:" . shows column . showString "."
   else
     return $ IntValue (value1 `div` value2)
 
@@ -156,31 +157,39 @@ evalExp (EList _ list) = do
 evalExp (EVar (Just (line, column)) (Ident name)) = do
   env <- ask
   case M.lookup (Ident name) env of
-    Nothing -> liftEither $ Left $ "ERROR: Identifier " ++ (show name) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
+    Nothing -> liftEither $ Left (showString "ERROR: Identifier "
+                . shows name . showString " not declared at line:" . shows line . showString ", column: " . shows column . showString ".")
     Just value -> liftEither value
 
 -- TODO code duplication
-evalExp (EApp (Just (line, column)) (Ident fName) args@(ArgList _ expr _)) = do
+evalExp (EApp pos@(Just (line, column)) (Ident fName) args@(ArgList _ expr _)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ "ERROR: Identifier " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
-    Just (Left errorMsg) -> liftEither $ Left errorMsg
-    Just (Right (FunValue fun)) -> applyArgs fun args
+    Nothing -> liftEither $ Left $ showString "ERROR: Identifier "
+                . shows fName . showString " not declared at line:" . shows line . showString ", column: " . shows column . showString "."
+    Just (Left errorMsg) -> liftEither $ Left (errorMsg . showString "\nThis error occured during function application at line:"
+          . shows line . showString ", column:" . shows column . showString ".")
+    Just (Right (FunValue fun)) -> applyArgs pos fun args
 
-evalExp (EApp (Just (line, column)) (Ident fName) args@(ArgBase _ expr)) = do
+evalExp (EApp pos@(Just (line, column)) (Ident fName) args@(ArgBase _ expr)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ "ERROR: Identifier " ++ (show fName) ++ " not declared at line:" ++ (show line) ++ ", column: " ++ (show column) ++ "."
-    Just (Left errorMsg) -> liftEither $ Left errorMsg
-    Just (Right (FunValue fun)) -> applyArgs fun args
+    Nothing -> liftEither $ Left $ showString "ERROR: Identifier "
+                . shows fName . showString " not declared at line:" . shows line . showString ", column: " . shows column . showString "."
+    Just (Left errorMsg) -> liftEither $ Left (errorMsg . showString "\nThis error occured during function application at line:"
+          . shows line . showString ", column:" . shows column . showString ".")
+    Just (Right (FunValue fun)) -> applyArgs pos fun args
 
 
-applyArgs :: HathonFunction -> Args (Maybe (Int, Int)) -> ExpMonad
-applyArgs fun (ArgList _ expr args) = do
+applyArgs :: Maybe(Int, Int) -> HathonFunction -> Args (Maybe (Int, Int)) -> ExpMonad
+applyArgs pos fun (ArgList _ expr args) = do
   paramValue <- evalExp expr
   packedPartialApp <- liftEither $ fun paramValue; let (FunValue partialApp) = packedPartialApp
-  applyArgs partialApp args
+  applyArgs pos partialApp args
 
-applyArgs fun (ArgBase _ expr) = do
+applyArgs (Just (line, column)) fun (ArgBase _ expr) = do
   paramValue <- evalExp expr
-  liftEither $ fun paramValue
+  case fun paramValue of
+    Left errorMsg -> liftEither $ Left (errorMsg . showString "\nThis error occured during function application at line:"
+            . shows line . showString ", column:" . shows column . showString ".")
+    Right returnValue -> liftEither $ Right returnValue
