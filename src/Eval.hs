@@ -52,10 +52,6 @@ evalDef enableRecursion def@(DFun _ name _ _ expr) = do
 
 
 evalExp :: Exp (Maybe (Int, Int)) -> ExpMonad
--- | EEqu a (Exp a) (Exp a) #TODO
--- | ENeq a (Exp a) (Exp a) #TODO
-
-
 evalExp (EIf _ condition thenExp elseExp) = do
   packedTrueOrFalse <- evalExp condition; let (BoolValue trueOrFalse) = packedTrueOrFalse
   if trueOrFalse then
@@ -80,10 +76,11 @@ evalExp (EAnd _ exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (BoolValue value2) = packedValue2
   return $ BoolValue (value1 && value2)
 
---evalExp (EEqu _ exp1 exp2) = do
---  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
---  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
---  return $ BoolValue (value1 == value2)
+evalExp (EEqu _ exp1 exp2) = do
+  value1 <- evalExp exp1
+  value2 <- evalExp exp2
+  equal <- liftEither $ expValueEq value1 value2
+  return $ BoolValue equal
 
 evalExp (EGre _ exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
@@ -105,10 +102,11 @@ evalExp (ELeq _ exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   return $ BoolValue (value1 <= value2)
 
---evalExp (ENeq _ exp1 exp2) = do
---  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
---  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
---  return $ BoolValue (value1 != value2)
+evalExp (ENeq _ exp1 exp2) = do
+  value1 <- evalExp exp1
+  value2 <- evalExp exp2
+  equal <- liftEither $ expValueEq value1 value2
+  return $ BoolValue (not equal)
 
 evalExp (ELAppend _ exp1 exp2) = do
   packedValue1 <- evalExp exp1

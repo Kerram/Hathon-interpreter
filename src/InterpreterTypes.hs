@@ -37,3 +37,16 @@ showSExpValue (ListValue value) = do
       headRepr <- showSExpValue h
       tailRepr <- showSListOfExpValue t
       return $ headRepr . showString ", " . tailRepr
+
+expValueEq :: ExpValue -> ExpValue -> Error Bool
+expValueEq (IntValue val1) (IntValue val2) = Right $ val1 == val2
+expValueEq (BoolValue val1) (BoolValue val2) = Right $ val1 == val2
+expValueEq (FunValue _) (FunValue _) = Left $ showString "ERROR: Cannot check equality between functional types!"
+expValueEq (ListValue val1) (ListValue val2) = do
+  if length val1 /= length val2 then
+    return False
+  else
+    do
+      intermediateResults <- zipWithM expValueEq val1 val2
+      return $ foldr (&&) True intermediateResults
+expValueEq _ _ = Left $ showString "ERROR: Cannot check equality between objects of different types!"
