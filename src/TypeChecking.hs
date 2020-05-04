@@ -124,3 +124,14 @@ getExpType (EDiv pos exp1 exp2) = do
     _ -> liftEither $ Left $
           addPosInfoToErr (showString "TYPECHECKING ERROR: First argument for division must be of type Int, but it is of type <" .
           shows type1 . showString ">. Error occured") pos
+
+getExpType (ELAppend pos exp1 exp2) = do
+  type1 <- getExpType exp1
+  type2 <- getExpType exp2
+  if type2 /= ListType type1 then
+    liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Append expected types: a and [a], but found <" .
+      shows type1 . showString "> and <" . shows type2 . showString ">") pos
+  else
+    case type2 of
+      EmptyList -> return $ ListType type1
+      ListType innerType2 -> return $ ListType (getMostConcreteType [type1, innerType2])
