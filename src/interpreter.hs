@@ -13,15 +13,12 @@ import Utils
 import TypeChecking
 
 
-import qualified Data.Map as M
-
-
 interpret :: String -> IO ()
 interpret program = do
   case pProg (myLexer program) of
     Bad errorMsg -> hPutStrLn stderr errorMsg
     Ok tree -> do
-      case runReaderT (checkTypes tree) M.empty of
+      case runReaderT (checkTypes tree) predefinedTypeEnv of
         Left errorMsg -> hPutStrLn stderr (errorMsg "")
         Right _ -> do
           result <- runExceptT $ runReaderT (evalProgram tree) predefinedEnv

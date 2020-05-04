@@ -16,7 +16,9 @@ addPosInfoToErr errorMsg Nothing = errorMsg . showString " at position <unknown>
 addPosInfoToErr errorMsg (Just (line, col)) =
   errorMsg . showString " at line:" . shows line . showString ", column:" . shows col . showString "."
 
-allSame :: Eq a => [a] -> Bool
-allSame [] = True
-allSame (h:[]) = True
-allSame (h:h2:t) = (h == h2) && allSame (h2:t)
+allPairsEqual :: (a -> a -> Bool) -> [a] -> Bool
+allPairsEqual eqFun [] = True
+allPairsEqual eqFun (h:t) =
+  case foldr (\elem acc -> acc && (eqFun elem h)) True t of
+    False -> False
+    True -> allPairsEqual eqFun t
