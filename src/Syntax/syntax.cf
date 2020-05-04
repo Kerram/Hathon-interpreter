@@ -30,6 +30,7 @@ EAdd. Exp5 ::= Exp5 "+" Exp6;
 
 EDiv. Exp6 ::= Exp6 "//" Exp7;
 EMul. Exp6 ::= Exp6 "*" Exp7;
+EMod. Exp6 ::= Exp6 "%" Exp7;
 
 EBNeg. Exp7 ::= "!" Exp8;
 ENeg. Exp7 ::= "-" Exp8;

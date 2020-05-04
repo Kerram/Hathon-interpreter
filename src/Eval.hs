@@ -136,6 +136,14 @@ evalExp (EMul _ exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   return $ IntValue (value1 * value2)
 
+evalExp (EMod pos exp1 exp2) = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  if value2 == 0 then
+    liftEither $ Left $ addPosInfoToErr (showString "ERROR: Modulo by 0") pos
+  else
+    return $ IntValue (value1 `mod` value2)
+
 evalExp (EBNeg _ expr) = do
   packedValue <- evalExp expr; let (BoolValue value) = packedValue
   return $ BoolValue (not value)
