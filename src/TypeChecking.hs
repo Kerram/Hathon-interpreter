@@ -218,4 +218,90 @@ getExpType (EVar pos (Ident name)) = do
   case M.lookup (Ident name) env of
     Nothing -> liftEither $ Left $
       addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot calculate type of " . shows name . showString ", because it is undeclared") pos
-    Just htype -> return htype
+    Just hType -> return hType
+
+getExpType (EApp pos (Ident name) args) = do
+  env <- ask
+  case M.lookup (Ident name) env of
+    Nothing -> liftEither $ Left $
+      addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot calculate type of " . shows name . showString ", because it is undeclared") pos
+    Just hType -> getTypeAfterApplication hType args
+
+
+getTypeAfterApplication :: HathonType -> Args (Maybe (Int, Int)) -> TypeExpMonad
+getTypeAfterApplication HeadFunType (ArgBase pos expr) = do
+  expType <- getExpType expr
+  case expType of
+    EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because builtin head function was applied to an empty list") pos
+    ListType hType -> return $ hType
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function head was applied to a non list type") pos
+
+getTypeAfterApplication EmptyFunType (ArgBase pos expr) = do
+  expType <- getExpType expr
+  case expType of
+    EmptyList -> return BoolType
+    ListType hType -> return BoolType
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function empty was applied to a non list type") pos
+
+getTypeAfterApplication TailFunType (ArgBase pos expr) = do
+  expType <- getExpType expr
+  case expType of
+    EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because tail function was applied to an empty list") pos
+    ListType _ -> return $ expType
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function tail was applied to non list type") pos
+
+getTypeAfterApplication (FunType argType retType) (ArgBase pos expr) = do
+  expType <- getExpType expr
+  case hTypeEq argType expType of
+    True -> return retType
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected <" .
+      shows argType . showString ">, but found <" . shows expType . showString ">") pos
+
+
+
+
+
+getTypeAfterApplication HeadFunType (ArgList pos expr args) = do
+  expType <- getExpType expr
+  case expType of
+    EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because builtin head function was applied to an empty list") pos
+    ListType hType -> getTypeAfterApplication hType args
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function head was applied to a non list type") pos
+
+-- To się zawsze wywala
+getTypeAfterApplication EmptyFunType (ArgList pos expr args) = do
+  expType <- getExpType expr
+  case expType of
+    EmptyList -> getTypeAfterApplication BoolType args
+    ListType hType -> getTypeAfterApplication BoolType args
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function empty was applied to a non list type") pos
+
+getTypeAfterApplication TailFunType (ArgList pos expr args) = do
+  expType <- getExpType expr
+  case expType of
+    EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because tail function was applied to an empty list") pos
+    ListType _ -> getTypeAfterApplication expType args
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function tail was applied to non list type") pos
+-- koniec wywalania
+
+
+
+
+
+
+
+
+getTypeAfterApplication (FunType argType retType) (ArgList pos expr args) = do
+  expType <- getExpType expr
+  case hTypeEq argType expType of
+    True -> getTypeAfterApplication retType args
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected <" .
+      shows argType . showString ">, but found <" . shows expType . showString ">") pos
+
+getTypeAfterApplication hType (ArgList pos _ _) = do
+  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type <" .
+    shows hType . showString ">, which is not a functional type") pos
+
+getTypeAfterApplication hType (ArgBase pos _) = do
+  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type <" .
+    shows hType . showString ">, which is not a functional type") pos
