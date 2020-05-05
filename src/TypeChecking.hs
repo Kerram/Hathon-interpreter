@@ -117,6 +117,20 @@ convertToHType (TFun _ argType retType) = FunType (convertToHType argType) (conv
 
 
 
+getEqualityType :: Maybe (Int, Int) -> Exp (Maybe (Int, Int)) -> Exp (Maybe (Int, Int)) -> TypeExpMonad
+getEqualityType pos exp1 exp2 = do
+  expType1 <- getExpType exp1
+  expType2 <- getExpType exp2
+  case hTypeEq expType1 expType2 of
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality between values of different types: <" .
+      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+    True -> case (containsFunctionalType expType1) || (containsFunctionalType expType2) of
+      True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality on types containing functional types: <" .
+        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+      False -> return BoolType
+
+
+
 
 checkTypes :: Prog (Maybe (Int, Int)) -> TCM
 checkTypes (PEmpty _) = return ()
@@ -163,6 +177,33 @@ getAndCheckDefType _ (DFun pos _ _ _ _) = do
 
 
 getExpType :: Exp (Maybe (Int, Int)) -> TypeExpMonad
+getExpType (EIf pos condition thenExp elseExp) = do
+  condType <- getExpType condition
+  case condType of
+    BoolType -> do
+      thenType <- getExpType thenExp
+      elseType <- getExpType elseExp
+      case hTypeEq thenType elseType of
+        False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Expressions in if statement are not of equal types. First one is of type <" .
+          shows thenType . showString "> and second is of type <" . shows elseType . showString ">") pos
+        True -> return $ getMostConcreteType [thenType, elseType]
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Condition in if statement has type <" .
+        shows condType . showString ">, but expected boolean type") pos
+
+getExpType (ELet _ def@(DFun _ name _ _ _) expr) = do
+  defType <- getAndCheckDefType True def
+  local (M.insert name defType) (getExpType expr)
+
+getExpType (ELambda pos lambdaType args expr) = do
+  getAndCheckDefType False (DFun pos lambdaName lambdaType args expr)
+
+getExpType (EEqu pos exp1 exp2) = do
+  getEqualityType pos exp1 exp2
+
+getExpType (ENeq pos exp1 exp2) = do
+  getEqualityType pos exp1 exp2
+
+
 getExpType (EInt _ _) = return IntType
 getExpType (ETrue _) = return BoolType
 getExpType (EFalse _) = return BoolType

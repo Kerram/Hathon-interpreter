@@ -10,9 +10,6 @@ import InterpreterTypes
 import Utils
 
 
-lambdaName :: Ident
-lambdaName = Ident "__builtin_lambda_name"
-
 evalProgram :: Prog (Maybe (Int, Int)) -> ProgMonad
 evalProgram (PEmpty _) = return ()
 

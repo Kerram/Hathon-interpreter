@@ -6,3 +6,6 @@ def x :: Int = 5;
 #def y :: Int arg = 10;
 
 fun [5,3,2];
+
+def sum :: Int -> Int -> Int x y = x + y;
+sum 10;

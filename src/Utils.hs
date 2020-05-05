@@ -2,6 +2,11 @@ module Utils where
 
 import System.Environment
 
+import Syntax.AbsSyntax
+
+
+lambdaName :: Ident
+lambdaName = Ident "__builtin_lambda_name"
 
 getProgramPath :: IO String
 getProgramPath = do
