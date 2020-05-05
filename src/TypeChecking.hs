@@ -116,6 +116,36 @@ convertToHType (TList _ listType) = ListType $ convertToHType listType
 convertToHType (TFun _ argType retType) = FunType (convertToHType argType) (convertToHType retType)
 
 
+getBoolOpType :: Maybe (Int, Int) ->
+                 Exp (Maybe (Int, Int)) ->
+                 Exp (Maybe (Int, Int)) ->
+                 TypeExpMonad
+getBoolOpType pos exp1 exp2 = do
+  expType1 <- getExpType exp1
+  expType2 <- getExpType exp2
+  case expType1 of
+    BoolType -> case expType2 of
+      BoolType -> return BoolType
+      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: <" .
+        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: <" .
+      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+
+getComparisionOpType :: Maybe (Int, Int) ->
+                        Exp (Maybe (Int, Int)) ->
+                        Exp (Maybe (Int, Int)) ->
+                        TypeExpMonad
+getComparisionOpType pos exp1 exp2 = do
+  expType1 <- getExpType exp1
+  expType2 <- getExpType exp2
+  case expType1 of
+    IntType -> case expType2 of
+      IntType -> return BoolType
+      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: <" .
+        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: <" .
+      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+
 
 getEqualityType :: Maybe (Int, Int) -> Exp (Maybe (Int, Int)) -> Exp (Maybe (Int, Int)) -> TypeExpMonad
 getEqualityType pos exp1 exp2 = do
@@ -128,6 +158,24 @@ getEqualityType pos exp1 exp2 = do
       True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality on types containing functional types: <" .
         shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
       False -> return BoolType
+
+
+
+getArithmOpType :: Maybe (Int, Int) ->
+                   Exp (Maybe (Int, Int)) ->
+                   Exp (Maybe (Int, Int)) ->
+                   TypeExpMonad
+getArithmOpType pos exp1 exp2 = do
+  expType1 <- getExpType exp1
+  expType2 <- getExpType exp2
+  case expType1 of
+    IntType -> case expType2 of
+      IntType -> return IntType
+      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: <" .
+        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: <" .
+      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+
 
 
 
@@ -203,6 +251,24 @@ getExpType (EEqu pos exp1 exp2) = do
 getExpType (ENeq pos exp1 exp2) = do
   getEqualityType pos exp1 exp2
 
+getExpType (EOr pos exp1 exp2) = do
+  getBoolOpType pos exp1 exp2
+
+getExpType (EAnd pos exp1 exp2) = do
+  getBoolOpType pos exp1 exp2
+
+getExpType (EGre pos exp1 exp2) = do
+  getComparisionOpType pos exp1 exp2
+
+getExpType (EGeq pos exp1 exp2) = do
+  getComparisionOpType pos exp1 exp2
+
+getExpType (ELes pos exp1 exp2) = do
+  getComparisionOpType pos exp1 exp2
+
+getExpType (ELeq pos exp1 exp2) = do
+  getComparisionOpType pos exp1 exp2
+
 
 getExpType (EInt _ _) = return IntType
 getExpType (ETrue _) = return BoolType
@@ -216,32 +282,33 @@ getExpType (EList pos elems) = do
     True -> return $ ListType (getMostConcreteType listOfTypes)
 
 getExpType (EAdd pos exp1 exp2) = do
-  type1 <- getExpType exp1
-  case type1 of
-    IntType -> do
-      type2 <- getExpType exp2
-      case type2 of
-        IntType -> return IntType
-        _ -> liftEither $ Left $
-              addPosInfoToErr (showString "TYPECHECKING ERROR: Second argument for addition must be of type Int, but it is of type <" .
-              shows type2 . showString ">. Error occured") pos
-    _ -> liftEither $ Left $
-          addPosInfoToErr (showString "TYPECHECKING ERROR: First argument for addition must be of type Int, but it is of type <" .
-          shows type1 . showString ">. Error occured") pos
+  getArithmOpType pos exp1 exp2
+
+getExpType (ESub pos exp1 exp2) = do
+  getArithmOpType pos exp1 exp2
+
+getExpType (EMul pos exp1 exp2) = do
+  getArithmOpType pos exp1 exp2
+
+getExpType (EMod pos exp1 exp2) = do
+  getArithmOpType pos exp1 exp2
 
 getExpType (EDiv pos exp1 exp2) = do
-  type1 <- getExpType exp1
-  case type1 of
-    IntType -> do
-      type2 <- getExpType exp2
-      case type2 of
-        IntType -> return IntType
-        _ -> liftEither $ Left $
-              addPosInfoToErr (showString "TYPECHECKING ERROR: Second argument for division must be of type Int, but it is of type <" .
-              shows type2 . showString ">. Error occured") pos
-    _ -> liftEither $ Left $
-          addPosInfoToErr (showString "TYPECHECKING ERROR: First argument for division must be of type Int, but it is of type <" .
-          shows type1 . showString ">. Error occured") pos
+  getArithmOpType pos exp1 exp2
+
+getExpType (EBNeg pos expr) = do
+  expType <- getExpType expr
+  case expType of
+    BoolType -> return BoolType
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean negation operation should have 1 operand of boolean type, but found: <" .
+      shows expType . showString ">") pos
+
+getExpType (ENeg pos expr) = do
+  expType <- getExpType expr
+  case expType of
+    IntType -> return IntType
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Integer negation operation should have 1 operand of integer type, but found: <" .
+      shows expType . showString ">") pos
 
 getExpType (ELAppend pos exp1 exp2) = do
   type1 <- getExpType exp1
