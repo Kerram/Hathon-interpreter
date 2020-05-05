@@ -11,6 +11,7 @@ import Predefined
 import Eval
 import Utils
 import TypeChecking
+import StackTrace
 
 
 interpret :: String -> IO ()
@@ -23,7 +24,7 @@ interpret program = do
         Right _ -> do
           result <- runExceptT $ runReaderT (evalProgram tree) predefinedEnv
           case result of
-            Left errorMsg -> hPutStrLn stderr (errorMsg "")
+            Left stackTrace -> hPutStrLn stderr (stackTraceToString stackTrace)
             Right _ -> return ()
 
 main :: IO ()

@@ -8,6 +8,7 @@ import Syntax.AbsSyntax
 
 import InterpreterTypes
 import Utils
+import StackTrace
 
 
 evalProgram :: Prog (Maybe (Int, Int)) -> ProgMonad
@@ -22,8 +23,8 @@ evalProgram (PExp pos expr prog) = do
   env <- ask
   value <- liftEither $ runReaderT (evalExp expr) env
   case showSExpValue value of
-    Left errorMsg -> liftEither $
-      Left $ addPosInfoToErr (errorMsg . showString "\nThis error occured during printing value of expression") pos
+    Left stackTrace -> liftEither $
+      Left $ appendST stackTrace $ addPosInfoToErr (showString "This error occured during printing value of expression") pos
     Right valueRepr -> do
       liftIO $ putStrLn (valueRepr "")
       evalProgram prog
@@ -124,7 +125,7 @@ evalExp (EDiv pos exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
-    liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Division by 0") pos
+    liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Division by 0") pos
   else
     return $ IntValue (value1 `div` value2)
 
@@ -137,7 +138,7 @@ evalExp (EMod pos exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
-    liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Modulo by 0") pos
+    liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Modulo by 0") pos
   else
     return $ IntValue (value1 `mod` value2)
 
@@ -160,22 +161,24 @@ evalExp (EList _ list) = do
 evalExp (EVar pos (Ident name)) = do
   env <- ask
   case M.lookup (Ident name) env of
-    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows name . showString " not declared") pos
+    Nothing -> liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows name . showString " not declared") pos
     Just value -> liftEither value
 
 -- TODO code duplication
 evalExp (EApp pos (Ident fName) args@(ArgList _ expr _)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
-    Just (Left errorMsg) -> liftEither $ Left $ addPosInfoToErr (errorMsg . showString "\nThis error occured during function application") pos
+    Nothing -> liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
+    Just (Left stackTrace) -> liftEither $ Left $
+      appendST stackTrace $ addPosInfoToErr (showString "This error occured during function application") pos
     Just (Right (FunValue fun)) -> applyArgs pos fun args
 
 evalExp (EApp pos (Ident fName) args@(ArgBase _ expr)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
-    Just (Left errorMsg) -> liftEither $ Left $ addPosInfoToErr (errorMsg . showString "\nThis error occured during function application") pos
+    Nothing -> liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
+    Just (Left stackTrace) -> liftEither $ Left $
+      appendST stackTrace $ addPosInfoToErr (showString "This error occured during function application") pos
     Just (Right (FunValue fun)) -> applyArgs pos fun args
 
 
@@ -188,5 +191,6 @@ applyArgs pos fun (ArgList _ expr args) = do
 applyArgs pos fun (ArgBase _ expr) = do
   paramValue <- evalExp expr
   case fun paramValue of
-    Left errorMsg -> liftEither $ Left $ addPosInfoToErr (errorMsg . showString "\nThis error occured during function application") pos
+    Left stackTrace -> liftEither $ Left $
+      appendST stackTrace $ addPosInfoToErr (showString "This error occured during function application") pos
     Right returnValue -> liftEither $ Right returnValue
