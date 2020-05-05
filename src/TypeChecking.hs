@@ -20,15 +20,17 @@ data HathonType = IntType
                   | EmptyFunType -- [a] -> Bool
                   | TailFunType -- [a] -> [a]
 
+-- This may be not 100% correct implementation of Show, but it is enough for our needs.
 instance Show HathonType where
   showsPrec _ IntType = showString "Int"
   showsPrec _ BoolType = showString "Bool"
-  showsPrec _ (FunType arg ret) = showString "(" . showsPrec 0 arg . showString ") => " . showsPrec 0 ret
   showsPrec _ (ListType listType) = showString "[" . showsPrec 0 listType . showString "]"
   showsPrec _ EmptyList = showString "[]"
   showsPrec _ HeadFunType = showString "__builtin_head_function_type"
   showsPrec _ EmptyFunType = showString "__builtin_empty_function_type"
   showsPrec _ TailFunType = showString "__builtin_tail_function_type"
+  showsPrec 11 (FunType arg ret) = showString "(" . showsPrec 11 arg . showString  " -> " . showsPrec 0 ret . showString ")"
+  showsPrec _ (FunType arg ret) = showsPrec 11 arg . showString " -> " . showsPrec 0 ret
 
 -- Watch out! This relation is not transitive, because of empty lists:
 -- [] == [Int] and [] == [Bool], but [Int] /= [Bool].
@@ -126,10 +128,10 @@ getBoolOpType pos exp1 exp2 = do
   case expType1 of
     BoolType -> case expType2 of
       BoolType -> return BoolType
-      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: <" .
-        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: <" .
-      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: \"" .
+        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: \"" .
+      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
 
 getComparisionOpType :: Maybe (Int, Int) ->
                         Exp (Maybe (Int, Int)) ->
@@ -141,10 +143,10 @@ getComparisionOpType pos exp1 exp2 = do
   case expType1 of
     IntType -> case expType2 of
       IntType -> return BoolType
-      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: <" .
-        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: <" .
-      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: \"" .
+        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: \"" .
+      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
 
 
 getEqualityType :: Maybe (Int, Int) -> Exp (Maybe (Int, Int)) -> Exp (Maybe (Int, Int)) -> TypeExpMonad
@@ -152,11 +154,11 @@ getEqualityType pos exp1 exp2 = do
   expType1 <- getExpType exp1
   expType2 <- getExpType exp2
   case hTypeEq expType1 expType2 of
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality between values of different types: <" .
-      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality between values of different types: \"" .
+      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
     True -> case (containsFunctionalType expType1) || (containsFunctionalType expType2) of
-      True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality on types containing functional types: <" .
-        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+      True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality on types containing functional types: \"" .
+        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
       False -> return BoolType
 
 
@@ -171,10 +173,10 @@ getArithmOpType pos exp1 exp2 = do
   case expType1 of
     IntType -> case expType2 of
       IntType -> return IntType
-      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: <" .
-        shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: <" .
-      shows expType1 . showString "> and <" . shows expType2 . showString ">") pos
+      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: \"" .
+        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: \"" .
+      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
 
 
 
@@ -186,7 +188,8 @@ checkTypes (PEmpty _) = return ()
 checkTypes (PExp pos expr prog) = do
   expType <- getExpType expr
   case containsFunctionalType expType of
-    True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot print value of type <" . shows expType . showString ">") pos
+    True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot print value of type \"" .
+      shows expType . showString "\"") pos
     False -> checkTypes prog
 
 checkTypes (PDef _ def@(DFun _ name _ _ _) prog) = do
@@ -215,8 +218,8 @@ getAndCheckDefType enableRecursion (DFun pos name defType [] expr) = do
                getExpType expr
   case hTypeEq defHType expType of
     True -> return $ defHType
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Definition type (with applied arguments) <" .
-      shows defHType . showString "> mismatch with its body type <" . shows expType . showString ">") pos
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Definition type (with applied arguments) \"" .
+      shows defHType . showString "\" mismatch with its body type \"" . shows expType . showString "\"") pos
 
 getAndCheckDefType _ (DFun pos _ _ _ _) = do
   liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Too many arguments in definition") pos
@@ -232,11 +235,11 @@ getExpType (EIf pos condition thenExp elseExp) = do
       thenType <- getExpType thenExp
       elseType <- getExpType elseExp
       case hTypeEq thenType elseType of
-        False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Expressions in if statement are not of equal types. First one is of type <" .
-          shows thenType . showString "> and second is of type <" . shows elseType . showString ">") pos
+        False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Expressions in if statement are not of equal types. First one is of type \"" .
+          shows thenType . showString "\" and second is of type \"" . shows elseType . showString "\"") pos
         True -> return $ getMostConcreteType [thenType, elseType]
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Condition in if statement has type <" .
-        shows condType . showString ">, but expected boolean type") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Condition in if statement has type \"" .
+        shows condType . showString "\", but expected boolean type") pos
 
 getExpType (ELet _ def@(DFun _ name _ _ _) expr) = do
   defType <- getAndCheckDefType True def
@@ -300,22 +303,22 @@ getExpType (EBNeg pos expr) = do
   expType <- getExpType expr
   case expType of
     BoolType -> return BoolType
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean negation operation should have 1 operand of boolean type, but found: <" .
-      shows expType . showString ">") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean negation operation should have 1 operand of boolean type, but found: \"" .
+      shows expType . showString "\"") pos
 
 getExpType (ENeg pos expr) = do
   expType <- getExpType expr
   case expType of
     IntType -> return IntType
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Integer negation operation should have 1 operand of integer type, but found: <" .
-      shows expType . showString ">") pos
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Integer negation operation should have 1 operand of integer type, but found: \"" .
+      shows expType . showString "\"") pos
 
 getExpType (ELAppend pos exp1 exp2) = do
   type1 <- getExpType exp1
   type2 <- getExpType exp2
   if not (hTypeEq type2 (ListType type1)) then
-    liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Append expected types: a and [a], but found <" .
-      shows type1 . showString "> and <" . shows type2 . showString ">") pos
+    liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Append expected types: a and [a], but found \"" .
+      shows type1 . showString "\" and \"" . shows type2 . showString "\"") pos
   else
     case type2 of
       EmptyList -> return $ ListType type1
@@ -362,8 +365,8 @@ getTypeAfterApplication (FunType argType retType) (ArgBase pos expr) = do
   expType <- getExpType expr
   case hTypeEq argType expType of
     True -> return retType
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected <" .
-      shows argType . showString ">, but found <" . shows expType . showString ">") pos
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected \"" .
+      shows argType . showString "\", but found \"" . shows expType . showString "\"") pos
 
 
 
@@ -403,13 +406,13 @@ getTypeAfterApplication (FunType argType retType) (ArgList pos expr args) = do
   expType <- getExpType expr
   case hTypeEq argType expType of
     True -> getTypeAfterApplication retType args
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected <" .
-      shows argType . showString ">, but found <" . shows expType . showString ">") pos
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected \"" .
+      shows argType . showString "\", but found \"" . shows expType . showString "\"") pos
 
 getTypeAfterApplication hType (ArgList pos _ _) = do
-  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type <" .
-    shows hType . showString ">, which is not a functional type") pos
+  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type \"" .
+    shows hType . showString "\", which is not a functional type") pos
 
 getTypeAfterApplication hType (ArgBase pos _) = do
-  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type <" .
-    shows hType . showString ">, which is not a functional type") pos
+  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type \"" .
+    shows hType . showString "\", which is not a functional type") pos

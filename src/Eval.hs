@@ -124,7 +124,7 @@ evalExp (EDiv pos exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
-    liftEither $ Left $ addPosInfoToErr (showString "ERROR: Division by 0") pos
+    liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Division by 0") pos
   else
     return $ IntValue (value1 `div` value2)
 
@@ -137,7 +137,7 @@ evalExp (EMod pos exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
   packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
   if value2 == 0 then
-    liftEither $ Left $ addPosInfoToErr (showString "ERROR: Modulo by 0") pos
+    liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Modulo by 0") pos
   else
     return $ IntValue (value1 `mod` value2)
 
@@ -160,21 +160,21 @@ evalExp (EList _ list) = do
 evalExp (EVar pos (Ident name)) = do
   env <- ask
   case M.lookup (Ident name) env of
-    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "ERROR: Identifier " . shows name . showString " not declared") pos
+    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows name . showString " not declared") pos
     Just value -> liftEither value
 
 -- TODO code duplication
 evalExp (EApp pos (Ident fName) args@(ArgList _ expr _)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "ERROR: Identifier " . shows fName . showString " not declared") pos
+    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
     Just (Left errorMsg) -> liftEither $ Left $ addPosInfoToErr (errorMsg . showString "\nThis error occured during function application") pos
     Just (Right (FunValue fun)) -> applyArgs pos fun args
 
 evalExp (EApp pos (Ident fName) args@(ArgBase _ expr)) = do
   env <- ask
   case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "ERROR: Identifier " . shows fName . showString " not declared") pos
+    Nothing -> liftEither $ Left $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
     Just (Left errorMsg) -> liftEither $ Left $ addPosInfoToErr (errorMsg . showString "\nThis error occured during function application") pos
     Just (Right (FunValue fun)) -> applyArgs pos fun args
 
