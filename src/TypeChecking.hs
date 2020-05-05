@@ -108,6 +108,16 @@ containsFunctionalType HeadFunType = True
 containsFunctionalType EmptyFunType = True
 containsFunctionalType TailFunType = True
 
+
+convertToHType :: Type (Maybe (Int, Int)) -> HathonType
+convertToHType (TInt _) = IntType
+convertToHType (TBool _) = BoolType
+convertToHType (TList _ listType) = ListType $ convertToHType listType
+convertToHType (TFun _ argType retType) = FunType (convertToHType argType) (convertToHType retType)
+
+
+
+
 checkTypes :: Prog (Maybe (Int, Int)) -> TCM
 checkTypes (PEmpty _) = return ()
 
@@ -116,6 +126,40 @@ checkTypes (PExp pos expr prog) = do
   case containsFunctionalType expType of
     True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot print value of type <" . shows expType . showString ">") pos
     False -> checkTypes prog
+
+checkTypes (PDef _ def@(DFun _ name _ _ _) prog) = do
+  defType <- getAndCheckDefType True def
+  local (M.insert name defType) (checkTypes prog)
+
+
+getAndCheckDefType :: Bool -> Def (Maybe (Int, Int)) -> TypeExpMonad
+getAndCheckDefType enableRecursion (DFun pos name (TFun _ argType retType) (arg:argsTail) expr) = do
+    if enableRecursion then
+      local (M.insert name (FunType argHType $ convertToHType retType)) partialApp
+    else
+      partialApp
+    where
+      argHType = convertToHType argType
+      partialApp = local (M.insert arg argHType) (do
+        retHType <- getAndCheckDefType False (DFun pos name retType argsTail expr)
+        return $ (FunType argHType retHType)
+        )
+
+getAndCheckDefType enableRecursion (DFun pos name defType [] expr) = do
+  let defHType = convertToHType defType
+  expType <- if enableRecursion then
+               local (M.insert name defHType) (getExpType expr)
+             else
+               getExpType expr
+  case hTypeEq defHType expType of
+    True -> return $ defHType
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Definition type (with applied arguments) <" .
+      shows defHType . showString "> mismatch with its body type <" . shows expType . showString ">") pos
+
+getAndCheckDefType _ (DFun pos _ _ _ _) = do
+  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Too many arguments in definition") pos
+
+
 
 
 getExpType :: Exp (Maybe (Int, Int)) -> TypeExpMonad
