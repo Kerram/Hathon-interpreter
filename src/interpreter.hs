@@ -31,7 +31,9 @@ interpret program = do
 
 main :: IO ()
 main = do
-  programPath <- getProgramPath
-  withFile programPath ReadMode (\handle -> do
-    program <- hGetContents handle
-    interpret program)
+  packedProgramPath <- runExceptT getProgramPath
+  case packedProgramPath of
+    Left errorMsg -> hPutStrLn stderr errorMsg
+    Right programPath -> withFile programPath ReadMode (\handle -> do
+      program <- hGetContents handle
+      interpret program)

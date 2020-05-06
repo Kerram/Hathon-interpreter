@@ -1,20 +1,25 @@
 module Utils where
 
+import Control.Monad.Except
 import System.Environment
 
 import Syntax.AbsSyntax
 
 
+helpLine :: String
+helpLine = "Help: To run interpreter type ./interpreter {filePath}, \
+  \where {filePath} is a path to file containing source code in Hathon."
+
 lambdaName :: Ident
 lambdaName = Ident "__builtin_lambda_name"
 
-getProgramPath :: IO String
+getProgramPath :: (ExceptT String IO) String
 getProgramPath = do
-  args <- getArgs
+  args <- liftIO getArgs
   let len = length args
   if len /= 1 then
-    error $ "ERROR: Intepreter got " ++ (show len) ++
-      " arguments, but it expected exactly 1!"
+    liftEither $ Left $ "ERROR: Intepreter got " ++ (show len) ++
+      " arguments, but it expected exactly 1!\n" ++ helpLine
   else
     return $ head args
 
