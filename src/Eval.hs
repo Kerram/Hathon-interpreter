@@ -11,6 +11,36 @@ import Utils
 import StackTrace
 
 
+evalBooleanOp :: Exp (Maybe (Int, Int)) ->
+                 Exp (Maybe (Int, Int)) ->
+                 (Bool -> Bool -> Bool) ->
+                 ExpMonad
+evalBooleanOp exp1 exp2 op = do
+  packedValue1 <- evalExp exp1; let (BoolValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (BoolValue value2) = packedValue2
+  return $ BoolValue (op value1 value2)
+
+
+evalComparisonOp :: Exp (Maybe (Int, Int)) ->
+                    Exp (Maybe (Int, Int)) ->
+                    (Integer -> Integer -> Bool) ->
+                    ExpMonad
+evalComparisonOp exp1 exp2 op = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ BoolValue (op value1 value2)
+
+
+evalArithmeticOp :: Exp (Maybe (Int, Int)) ->
+                    Exp (Maybe (Int, Int)) ->
+                    (Integer -> Integer -> Integer) ->
+                    ExpMonad
+evalArithmeticOp exp1 exp2 op = do
+  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
+  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
+  return $ IntValue (op value1 value2)
+
+
 evalProgram :: Prog (Maybe (Int, Int)) -> ProgMonad
 evalProgram (PEmpty _) = return ()
 
@@ -64,15 +94,11 @@ evalExp (ELet _ def@(DFun _ name _ _ _) expr) = do
 evalExp (ELambda pos lambdaType args expr) =
   evalDef False (DFun pos lambdaName lambdaType args expr)
 
-evalExp (EOr _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (BoolValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (BoolValue value2) = packedValue2
-  return $ BoolValue (value1 || value2)
+evalExp (EOr _ exp1 exp2) =
+  evalBooleanOp exp1 exp2 (||)
 
-evalExp (EAnd _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (BoolValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (BoolValue value2) = packedValue2
-  return $ BoolValue (value1 && value2)
+evalExp (EAnd _ exp1 exp2) =
+  evalBooleanOp exp1 exp2 (&&)
 
 evalExp (EEqu _ exp1 exp2) = do
   value1 <- evalExp exp1
@@ -80,25 +106,17 @@ evalExp (EEqu _ exp1 exp2) = do
   equal <- liftEither $ expValueEq value1 value2
   return $ BoolValue equal
 
-evalExp (EGre _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 > value2)
+evalExp (EGre _ exp1 exp2) =
+  evalComparisonOp exp1 exp2 (>)
 
-evalExp (EGeq _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 >= value2)
+evalExp (EGeq _ exp1 exp2) =
+  evalComparisonOp exp1 exp2 (>=)
 
-evalExp (ELes _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 < value2)
+evalExp (ELes _ exp1 exp2) =
+  evalComparisonOp exp1 exp2 (<)
 
-evalExp (ELeq _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ BoolValue (value1 <= value2)
+evalExp (ELeq _ exp1 exp2) =
+  evalComparisonOp exp1 exp2 (<=)
 
 evalExp (ENeq _ exp1 exp2) = do
   value1 <- evalExp exp1
@@ -111,15 +129,11 @@ evalExp (ELAppend _ exp1 exp2) = do
   packedValue2 <- evalExp exp2; let (ListValue value2) = packedValue2
   return $ ListValue $ packedValue1:value2
 
-evalExp (ESub _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ IntValue (value1 - value2)
+evalExp (ESub _ exp1 exp2) =
+  evalArithmeticOp exp1 exp2 (-)
 
-evalExp (EAdd _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ IntValue (value1 + value2)
+evalExp (EAdd _ exp1 exp2) =
+  evalArithmeticOp exp1 exp2 (+)
 
 evalExp (EDiv pos exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
@@ -129,10 +143,8 @@ evalExp (EDiv pos exp1 exp2) = do
   else
     return $ IntValue (value1 `div` value2)
 
-evalExp (EMul _ exp1 exp2) = do
-  packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
-  packedValue2 <- evalExp exp2; let (IntValue value2) = packedValue2
-  return $ IntValue (value1 * value2)
+evalExp (EMul _ exp1 exp2) =
+  evalArithmeticOp exp1 exp2 (*)
 
 evalExp (EMod pos exp1 exp2) = do
   packedValue1 <- evalExp exp1; let (IntValue value1) = packedValue1
@@ -164,21 +176,12 @@ evalExp (EVar pos (Ident name)) = do
     Nothing -> liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows name . showString " not declared") pos
     Just value -> liftEither value
 
--- TODO code duplication
-evalExp (EApp pos (Ident fName) args@(ArgList _ expr _)) = do
+evalExp (EApp pos (Ident fName) args) = do
   env <- ask
   case M.lookup (Ident fName) env of
     Nothing -> liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
     Just (Left stackTrace) -> liftEither $ Left $
-      appendST stackTrace $ addPosInfoToErr (showString "This error occured during function application") pos
-    Just (Right (FunValue fun)) -> applyArgs pos fun args
-
-evalExp (EApp pos (Ident fName) args@(ArgBase _ expr)) = do
-  env <- ask
-  case M.lookup (Ident fName) env of
-    Nothing -> liftEither $ Left $ newST $ addPosInfoToErr (showString "RUNTIME ERROR: Identifier " . shows fName . showString " not declared") pos
-    Just (Left stackTrace) -> liftEither $ Left $
-      appendST stackTrace $ addPosInfoToErr (showString "This error occured during function application") pos
+      appendST stackTrace $ addPosInfoToErr (showString "This error was uncovered during function application") pos
     Just (Right (FunValue fun)) -> applyArgs pos fun args
 
 
