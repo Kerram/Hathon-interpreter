@@ -1,0 +1,10 @@
+def filter :: [Int] -> (Int -> Bool) -> [Int] l =
+  if empty l then
+    []
+  else
+    let def h :: Int = head l
+    in
+      if fun h then
+        h:filter (tail l) fun
+      else
+        filter (tail l) fun;

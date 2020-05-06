@@ -1,0 +1,13 @@
+lambda :: Int . -> 5; # Numbers are like zero argument functions.
+
+(lambda :: Int . -> 5) == 5;
+
+def functions :: [Int -> Int] =
+  [lambda :: Int -> Int . x -> x + 10, lambda :: Int -> Int . x -> x + 100];
+
+head functions 4;
+head (tail functions) 2;
+
+def sum :: Int -> Int -> Int = lambda :: Int -> Int -> Int . x y -> x + y;
+
+sum 1 5;

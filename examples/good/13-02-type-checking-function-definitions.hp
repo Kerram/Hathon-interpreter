@@ -1,0 +1,1 @@
+def fun :: [Int] -> Int -> Int l = head l;

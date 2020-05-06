@@ -1,0 +1,8 @@
+def x :: Int = 5;
+def f :: Int -> Int a = a + x;
+
+f 10;  # 15
+
+def x :: Int = 5;
+
+f 10;  # Still 15.

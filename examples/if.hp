@@ -1,9 +1,0 @@
-if True then 10 else 1;
-
-if True then [] else [[]];
-
-
-def fun :: Int -> Bool x = x > 10;
-let def x :: Int  = 10 in
-
-  if fun x then 11 else 00;

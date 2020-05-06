@@ -1,0 +1,9 @@
+def filter :: (Int -> Bool) -> [Int] -> [Int] fun l =
+      let def h :: Int = head l
+                  in
+                    if fun h then h:filter fun (tail l)
+                             else filter fun (tail l);
+
+def fun :: Int -> Bool x = x > 10;
+
+filter fun []; # Stack trace of length 3.

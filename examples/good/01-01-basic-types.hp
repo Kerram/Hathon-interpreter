@@ -1,0 +1,10 @@
+5;
+True;
+False;
+10;
+
+def x :: Int = 10;
+def b :: Bool = True;
+
+x;
+b;

@@ -1,4 +1,0 @@
-def x :: Int = 5;
-def f :: Int -> Int a = a + x;
-
-f 10;

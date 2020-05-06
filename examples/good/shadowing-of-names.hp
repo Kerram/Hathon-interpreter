@@ -1,0 +1,14 @@
+def x :: Int = 5;
+
+x;
+
+def fun :: Int -> Int x = x + 10;
+fun 100;
+
+def fun2 :: Int -> Int -> Int -> Int y x y = x + y;
+fun2 100000 2 3;
+
+def name :: Int -> Int name = name;
+
+name 7;
+name 0;

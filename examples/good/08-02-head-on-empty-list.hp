@@ -1,0 +1,4 @@
+head (tail [4]);
+
+# head [] would be detected by type checking,
+# because we cannot deduce type of the expression.

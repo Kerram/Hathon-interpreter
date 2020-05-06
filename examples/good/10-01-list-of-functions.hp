@@ -1,0 +1,4 @@
+def fun :: [Int -> (Int -> Int) -> Bool] -> Int -> (Int -> Int) -> Bool = head;
+
+# This is a hacky way to get value's type from the interpreter, although it will not pass type checking phase.
+[head, head, head, fun];

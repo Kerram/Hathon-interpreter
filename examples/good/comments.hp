@@ -1,0 +1,10 @@
+# This is one line comment.
+
+/* This is
+  def non-parsable;
+    and multiline comment (it cannot be nested).
+(*&^$$#^)
+^- This is definitely non-parsable outside of a comment.
+*/
+
+1 + 2; # This works despite of random characters above.

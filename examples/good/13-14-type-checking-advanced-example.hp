@@ -1,0 +1,21 @@
+def map :: ([Int] -> Int) -> [[Int]] -> [Int] fun l =
+  if empty l then
+    []
+  else
+    (fun (head l)):(map fun (tail l));
+
+# Notice that this expression will not be evaluated, although it is correct,
+# because the rest of the program will not pass type checking phase.
+map head [[24, 5, 52, 62], [42, 4, 52, 52], [42]];
+
+
+def map2 :: ([Int] -> [Int]) -> [[Int]] -> [[Int]] fun l =
+  if empty l then
+    []
+  else
+    (fun (head l)):(map fun (tail l)); # Here we should type map2, instead of map!
+
+
+map2 tail [[24, 5, 52, 62], [42, 4, 52, 52], [42]];
+
+map head [[24, 5, 52, 62], [42, 4,52, 52], [42]];

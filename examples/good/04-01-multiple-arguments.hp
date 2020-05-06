@@ -1,0 +1,33 @@
+def sum :: Int -> Int -> Int x y = x + y;
+
+sum 10 5;
+sum (-4) 1;
+
+def odd :: Int -> Bool x = x % 2 == 1;
+
+odd 1;
+odd 4;
+odd (-2);
+
+def max :: Int -> Int -> Int -> Int a b c =
+  if a >= b then
+    if a >= c then
+      a
+    else
+      c
+  else if b >= c then
+    b
+  else
+    c
+;
+
+max 1 2 3;
+max 6 4 2;
+max 40 42 41;
+
+
+# Functions can start from capital letters.
+def And :: Bool -> Bool -> Bool -> Bool a b c = a && b && c;
+
+And True False True;
+And True True True;

@@ -1,0 +1,15 @@
+if True then 0 else 1;
+if False then False else True;
+
+
+if True then [] else [[]];
+if False then [] else [[]];
+
+def fun :: Int -> Bool x = x > 10;
+
+let def x :: Int = 5 in
+  if fun x then 11 else 00;
+
+def x :: Int = 10;
+
+if x != 10 then 6 * 6 - 36 else (42 // 7) * 7;

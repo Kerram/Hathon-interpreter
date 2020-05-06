@@ -1,0 +1,8 @@
+def head :: [Int] -> Int l = 5;
+
+# We can shadow predefined functions, but if we do so we have a problem.
+
+head [5, 1, 2];  # OK
+head [1, 2, 3];  # Not OK
+
+# How to return to original meaning? -- Impossible.

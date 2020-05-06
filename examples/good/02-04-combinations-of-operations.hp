@@ -1,0 +1,16 @@
+# 42 - Fastest way to verify it is to copy it into python3, the syntax is identical.
+2 + 5 // 5 * 4 + 33 - 5 * (53 // 4 // 2 // 4 // 2) + 5 % 2 + 51 % 2 % 3 * 2;
+
+# False
+5 * 10 - 4 != -4 + 10 + 10 + 3 * 10;
+
+# True
+False || (5 != 1) && (4 == 4) || False && (6 * 50 >= 5 - 10);
+
+# True
+# This parses to ((2 == 1 + 1) && True) || ((False == True) || ((2 == 3) || (2 > -10))).
+2 == 1 + 1 && True || False == True || 2 == 3 || 2 > -10;
+
+
+# -1
+if -10 == (if True then 1 else -10) then 0 else -1;

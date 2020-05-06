@@ -1,0 +1,2 @@
+# We check it here, not in runtime, because we need to evaluate its type.
+x;

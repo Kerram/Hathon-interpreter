@@ -1,1 +1,0 @@
-def f :: Bool -> ((Int -> Int) -> Int) -> (Int -> [Int]) -> Bool = 1;

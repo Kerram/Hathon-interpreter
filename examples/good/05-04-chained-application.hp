@@ -1,0 +1,8 @@
+def fun :: Int -> Int x = x + 10;
+
+head [fun, fun] 1;
+
+def id :: (Int -> Int) -> Int -> Int f = f;
+def id2 :: ((Int -> Int) -> Int -> Int) -> (Int -> Int) -> Int -> Int f = f;
+
+id2 id fun 9;

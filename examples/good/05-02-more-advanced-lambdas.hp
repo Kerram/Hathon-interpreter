@@ -1,0 +1,17 @@
+def filter :: (Int -> Bool) -> [Int] -> [Int] fun l =
+  if empty l then
+    []
+  else
+    let def h :: Int = head l
+    in
+      if fun h then
+        h:filter fun (tail l)
+      else
+        filter fun (tail l);
+
+filter (lambda :: Int -> Bool . x -> x == 10) [1, 4, 5, 10, 5, 10, 5, 10, 4, 3, 10];
+
+let def function :: [Int] -> [Int] =
+  let def x :: Int = 6 in
+    if x == 5 then tail else lambda :: [Int] -> [Int] . -> tail
+in function [115, 3, 1];

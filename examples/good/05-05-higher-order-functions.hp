@@ -1,0 +1,9 @@
+def reverse :: (Int -> Int -> Int) -> Int -> Int -> Int op x y = op y x;
+def sum :: Int -> Int -> Int x y = x + y;
+def sub :: Int -> Int -> Int x y = x - y;
+
+reverse sum 5 2;
+5 + 2;
+
+reverse sub 4 5;
+4 - 5;

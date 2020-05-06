@@ -1,0 +1,36 @@
+# Returns always 10.
+def add :: Int -> Int acc =
+  if acc == 10 then
+    acc
+  else
+    add (acc + 1);
+
+add 10;
+add 5;
+
+# Returns always bound.
+def add2 :: Int -> Int -> Int acc bound =
+  if acc == bound then
+    acc
+  else
+    add2 (acc + 1) bound;
+
+add2 10 10;
+add2 3 5;
+
+True; # For better readability of results.
+
+
+def fib :: Int -> Int n =
+  if n == 0 then
+    0
+  else if n == 1 then
+    1
+  else
+    fib (n - 1) + fib (n - 2);
+
+fib 0;   # 0
+fib 2;   # 1
+fib 5;   # 5
+fib 10;  # 55
+fib 12;  # 144

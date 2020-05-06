@@ -1,0 +1,2 @@
+# Infinite recurrence -- please type Ctrl-C to shut it down.
+def x :: Int = x + 1;

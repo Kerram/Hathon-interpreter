@@ -1,0 +1,12 @@
+def list :: Int -> [Int] x = x:(list x);
+
+/*
+list 1; <- This is an infinite list of ones. If we uncomment it, we will just
+           enter an infinite recurrence, without printing anything in contrast to
+           Haskell, where we will print as much as we can due to its laziness.
+*/
+
+# We first evaluate whole list and only then apply head function,
+# so we will get runtime error (division by 0),
+# but to obtain only head we don't need to divide by 0.
+head [5, 63, 4 // 0, head (list 10)];
