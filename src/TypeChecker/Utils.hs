@@ -26,7 +26,9 @@ getMostConcreteType types =
   in
     getMostConcreteTypeWithLevels (0, snd $ head typesWithLevels) typesWithLevels
     where
-      getMostConcreteTypeWithLevels :: (Int, HathonType) -> [(Maybe Int, HathonType)] -> HathonType
+      getMostConcreteTypeWithLevels :: (Int, HathonType) ->
+                                       [(Maybe Int, HathonType)] ->
+                                       HathonType
       getMostConcreteTypeWithLevels (_, maxType) [] = maxType
       getMostConcreteTypeWithLevels _ ((Nothing, concreteType):_) = concreteType
       getMostConcreteTypeWithLevels (maxLevel, maxType) ((Just level, htype):t) =
@@ -49,4 +51,5 @@ convertToHType :: Type (Maybe (Int, Int)) -> HathonType
 convertToHType (TInt _) = IntType
 convertToHType (TBool _) = BoolType
 convertToHType (TList _ listType) = ListType $ convertToHType listType
-convertToHType (TFun _ argType retType) = FunType (convertToHType argType) (convertToHType retType)
+convertToHType (TFun _ argType retType) =
+  FunType (convertToHType argType) (convertToHType retType)

@@ -32,7 +32,8 @@ instance Show HathonType where
   showsPrec _ HeadFunType = showString "__builtin_head_function_type"
   showsPrec _ EmptyFunType = showString "__builtin_empty_function_type"
   showsPrec _ TailFunType = showString "__builtin_tail_function_type"
-  showsPrec 11 (FunType arg ret) = showString "(" . showsPrec 11 arg . showString  " -> " . showsPrec 0 ret . showString ")"
+  showsPrec 11 (FunType arg ret) = showString "(" . showsPrec 11 arg .
+    showString  " -> " . showsPrec 0 ret . showString ")"
   showsPrec _ (FunType arg ret) = showsPrec 11 arg . showString " -> " . showsPrec 0 ret
 
 
@@ -41,7 +42,8 @@ instance Show HathonType where
 hTypeCouldBeEq :: HathonType -> HathonType -> Bool
 hTypeCouldBeEq IntType IntType = True
 hTypeCouldBeEq BoolType BoolType = True
-hTypeCouldBeEq (FunType arg1 ret1) (FunType arg2 ret2) = (hTypeCouldBeEq arg1 arg2) && (hTypeCouldBeEq ret1 ret2)
+hTypeCouldBeEq (FunType arg1 ret1) (FunType arg2 ret2) =
+  (hTypeCouldBeEq arg1 arg2) && (hTypeCouldBeEq ret1 ret2)
 hTypeCouldBeEq EmptyList (ListType _) = True
 hTypeCouldBeEq (ListType _) EmptyList = True
 hTypeCouldBeEq EmptyList EmptyList = True

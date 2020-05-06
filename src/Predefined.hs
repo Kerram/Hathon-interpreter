@@ -9,15 +9,17 @@ import StackTrace
 
 
 predefinedHead :: HathonFunction
-predefinedHead (ListValue []) = Left $ newST $ showString "RUNTIME ERROR: Function head cannot be applied to an empty list!"
+predefinedHead (ListValue []) = Left $ newST $
+  showString "RUNTIME ERROR: Function head cannot be applied to an empty list!"
 predefinedHead (ListValue (h:_)) = Right h
 
 predefinedEmpty :: HathonFunction
-predefinedEmpty (ListValue []) = Right (BoolValue True)
-predefinedEmpty (ListValue _) = Right (BoolValue False)
+predefinedEmpty (ListValue []) = Right $ BoolValue True
+predefinedEmpty (ListValue _) = Right $ BoolValue False
 
 predefinedTail :: HathonFunction
-predefinedTail (ListValue []) = Left $ newST $  showString "RUNTIME ERROR: Function tail cannot be applied to an empty list!"
+predefinedTail (ListValue []) = Left $ newST $
+  showString "RUNTIME ERROR: Function tail cannot be applied to an empty list!"
 predefinedTail (ListValue (_:t)) = Right (ListValue t)
 
 predefinedEnv :: Env

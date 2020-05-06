@@ -1,19 +1,19 @@
 module Main where
 
-import System.IO
 import Control.Monad.Except
 import Control.Monad.Reader
+import System.IO
 
-import Syntax.ParSyntax (pProg, myLexer)
 import Syntax.ErrM
+import Syntax.ParSyntax (pProg, myLexer)
 
-import TypeChecker.TypeChecking
 import TypeChecker.Predefined
+import TypeChecker.TypeChecking
 
-import Predefined
 import Eval
-import Utils
+import Predefined
 import StackTrace
+import Utils
 
 
 interpret :: String -> IO ()
