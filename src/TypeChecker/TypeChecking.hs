@@ -12,69 +12,71 @@ import TypeChecker.Utils
 import Utils
 
 
+getUnaryOpType :: Maybe (Int, Int) ->
+                  Exp (Maybe (Int, Int)) ->
+                  HathonType ->
+                  HathonType ->
+                  TypeExpMonad
+getUnaryOpType pos expr argType retType = do
+  expType <- getExpType expr
+  case hTypeCouldBeEq expType argType of
+    True -> return retType
+    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Operand's type mismatch. Expected: \"" .
+      shows argType . showString "\", but found: " . shows expType . showString "\"") pos
+
+
+getBinaryOpType :: Maybe (Int, Int) ->
+             Exp (Maybe (Int, Int)) ->
+             HathonType ->
+             Exp (Maybe (Int, Int)) ->
+             HathonType ->
+             HathonType ->
+             TypeExpMonad
+getBinaryOpType pos exp1 type1 exp2 type2 retType = do
+ expType1 <- getExpType exp1
+ expType2 <- getExpType exp2
+ case (hTypeCouldBeEq expType1 type1) && (hTypeCouldBeEq expType2 type2) of
+   True -> return retType
+   False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Operands' types mismatch. Expected: \"" .
+     shows type1 . showString "\" and \"" . shows type2 . showString "\", but found: \"" .
+     shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
+
 
 getBoolOpType :: Maybe (Int, Int) ->
                  Exp (Maybe (Int, Int)) ->
                  Exp (Maybe (Int, Int)) ->
                  TypeExpMonad
-getBoolOpType pos exp1 exp2 = do
-  expType1 <- getExpType exp1
-  expType2 <- getExpType exp2
-  case expType1 of
-    BoolType -> case expType2 of
-      BoolType -> return BoolType
-      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: \"" .
-        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean operation should have 2 operands of boolean type, but found: \"" .
-      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
+getBoolOpType pos exp1 exp2 = getBinaryOpType pos exp1 BoolType exp2 BoolType BoolType
+
 
 getComparisionOpType :: Maybe (Int, Int) ->
                         Exp (Maybe (Int, Int)) ->
                         Exp (Maybe (Int, Int)) ->
                         TypeExpMonad
-getComparisionOpType pos exp1 exp2 = do
-  expType1 <- getExpType exp1
-  expType2 <- getExpType exp2
-  case expType1 of
-    IntType -> case expType2 of
-      IntType -> return BoolType
-      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: \"" .
-        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Comparison operation should have 2 operands of integer type, but found: \"" .
-      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-
-
-getEqualityType :: Maybe (Int, Int) -> Exp (Maybe (Int, Int)) -> Exp (Maybe (Int, Int)) -> TypeExpMonad
-getEqualityType pos exp1 exp2 = do
-  expType1 <- getExpType exp1
-  expType2 <- getExpType exp2
-  case hTypeEq expType1 expType2 of
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality between values of different types: \"" .
-      shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-    True -> case (containsFunctionalType expType1) || (containsFunctionalType expType2) of
-      True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality on types containing functional types: \"" .
-        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-      False -> return BoolType
-
+getComparisionOpType pos exp1 exp2 = getBinaryOpType pos exp1 IntType exp2 IntType BoolType
 
 
 getArithmOpType :: Maybe (Int, Int) ->
                    Exp (Maybe (Int, Int)) ->
                    Exp (Maybe (Int, Int)) ->
                    TypeExpMonad
-getArithmOpType pos exp1 exp2 = do
+getArithmOpType pos exp1 exp2 = getBinaryOpType pos exp1 IntType exp2 IntType IntType
+
+
+getEqualityType :: Maybe (Int, Int) ->
+                   Exp (Maybe (Int, Int)) ->
+                   Exp (Maybe (Int, Int)) ->
+                   TypeExpMonad
+getEqualityType pos exp1 exp2 = do
   expType1 <- getExpType exp1
   expType2 <- getExpType exp2
-  case expType1 of
-    IntType -> case expType2 of
-      IntType -> return IntType
-      _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: \"" .
-        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Arithmetic operation should have 2 operands of integer type, but found: \"" .
+  case hTypeCouldBeEq expType1 expType2 of
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality between values of different types: \"" .
       shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
-
-
-
+    True -> case (containsFunctionalType expType1) || (containsFunctionalType expType2) of
+      True -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot check equality on types containing functional types: \"" .
+        shows expType1 . showString "\" and \"" . shows expType2 . showString "\"") pos
+      False -> return BoolType
 
 
 checkTypes :: Prog (Maybe (Int, Int)) -> TCM
@@ -111,15 +113,13 @@ getAndCheckDefType enableRecursion (DFun pos name defType [] expr) = do
                local (M.insert name defHType) (getExpType expr)
              else
                getExpType expr
-  case hTypeEq defHType expType of
+  case hTypeCouldBeEq defHType expType of
     True -> return $ defHType
     False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Definition type (with applied arguments) \"" .
       shows defHType . showString "\" mismatch with its body type \"" . shows expType . showString "\"") pos
 
 getAndCheckDefType _ (DFun pos _ _ _ _) = do
   liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Too many arguments in definition") pos
-
-
 
 
 getExpType :: Exp (Maybe (Int, Int)) -> TypeExpMonad
@@ -129,8 +129,8 @@ getExpType (EIf pos condition thenExp elseExp) = do
     BoolType -> do
       thenType <- getExpType thenExp
       elseType <- getExpType elseExp
-      case hTypeEq thenType elseType of
-        False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Expressions in if statement are not of equal types. First one is of type \"" .
+      case hTypeCouldBeEq thenType elseType of
+        False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Return expressions in if statement are not of equal types. First one is of type \"" .
           shows thenType . showString "\" and second is of type \"" . shows elseType . showString "\"") pos
         True -> return $ getMostConcreteType [thenType, elseType]
     _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Condition in if statement has type \"" .
@@ -140,33 +140,24 @@ getExpType (ELet _ def@(DFun _ name _ _ _) expr) = do
   defType <- getAndCheckDefType True def
   local (M.insert name defType) (getExpType expr)
 
-getExpType (ELambda pos lambdaType args expr) = do
+getExpType (ELambda pos lambdaType args expr) =
   getAndCheckDefType False (DFun pos lambdaName lambdaType args expr)
 
-getExpType (EEqu pos exp1 exp2) = do
-  getEqualityType pos exp1 exp2
+getExpType (EEqu pos exp1 exp2) = getEqualityType pos exp1 exp2
 
-getExpType (ENeq pos exp1 exp2) = do
-  getEqualityType pos exp1 exp2
+getExpType (ENeq pos exp1 exp2) = getEqualityType pos exp1 exp2
 
-getExpType (EOr pos exp1 exp2) = do
-  getBoolOpType pos exp1 exp2
+getExpType (EOr pos exp1 exp2) = getBoolOpType pos exp1 exp2
 
-getExpType (EAnd pos exp1 exp2) = do
-  getBoolOpType pos exp1 exp2
+getExpType (EAnd pos exp1 exp2) = getBoolOpType pos exp1 exp2
 
-getExpType (EGre pos exp1 exp2) = do
-  getComparisionOpType pos exp1 exp2
+getExpType (EGre pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
-getExpType (EGeq pos exp1 exp2) = do
-  getComparisionOpType pos exp1 exp2
+getExpType (EGeq pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
-getExpType (ELes pos exp1 exp2) = do
-  getComparisionOpType pos exp1 exp2
+getExpType (ELes pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
-getExpType (ELeq pos exp1 exp2) = do
-  getComparisionOpType pos exp1 exp2
-
+getExpType (ELeq pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
 getExpType (EInt _ _) = return IntType
 getExpType (ETrue _) = return BoolType
@@ -175,43 +166,28 @@ getExpType (EList _ []) = return EmptyList
 
 getExpType (EList pos elems) = do
   listOfTypes <- mapM getExpType elems
-  case allPairsEqual hTypeEq listOfTypes of
+  case allPairsEqual hTypeCouldBeEq listOfTypes of
     False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Heterogeneous lists are not allowed, but found one") pos
     True -> return $ ListType (getMostConcreteType listOfTypes)
 
-getExpType (EAdd pos exp1 exp2) = do
-  getArithmOpType pos exp1 exp2
+getExpType (EAdd pos exp1 exp2) = getArithmOpType pos exp1 exp2
 
-getExpType (ESub pos exp1 exp2) = do
-  getArithmOpType pos exp1 exp2
+getExpType (ESub pos exp1 exp2) = getArithmOpType pos exp1 exp2
 
-getExpType (EMul pos exp1 exp2) = do
-  getArithmOpType pos exp1 exp2
+getExpType (EMul pos exp1 exp2) = getArithmOpType pos exp1 exp2
 
-getExpType (EMod pos exp1 exp2) = do
-  getArithmOpType pos exp1 exp2
+getExpType (EMod pos exp1 exp2) = getArithmOpType pos exp1 exp2
 
-getExpType (EDiv pos exp1 exp2) = do
-  getArithmOpType pos exp1 exp2
+getExpType (EDiv pos exp1 exp2) = getArithmOpType pos exp1 exp2
 
-getExpType (EBNeg pos expr) = do
-  expType <- getExpType expr
-  case expType of
-    BoolType -> return BoolType
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Boolean negation operation should have 1 operand of boolean type, but found: \"" .
-      shows expType . showString "\"") pos
+getExpType (EBNeg pos expr) = getUnaryOpType pos expr BoolType BoolType
 
-getExpType (ENeg pos expr) = do
-  expType <- getExpType expr
-  case expType of
-    IntType -> return IntType
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Integer negation operation should have 1 operand of integer type, but found: \"" .
-      shows expType . showString "\"") pos
+getExpType (ENeg pos expr) = getUnaryOpType pos expr IntType IntType
 
 getExpType (ELAppend pos exp1 exp2) = do
   type1 <- getExpType exp1
   type2 <- getExpType exp2
-  if not (hTypeEq type2 (ListType type1)) then
+  if not (hTypeCouldBeEq type2 (ListType type1)) then
     liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Append expected types: a and [a], but found \"" .
       shows type1 . showString "\" and \"" . shows type2 . showString "\"") pos
   else
@@ -235,79 +211,48 @@ getExpType (EApp pos (Ident name) args) = do
 
 
 getTypeAfterApplication :: HathonType -> Args (Maybe (Int, Int)) -> TypeExpMonad
-getTypeAfterApplication HeadFunType (ArgBase pos expr) = do
-  expType <- getExpType expr
+getTypeAfterApplication HeadFunType args = do
+  let pos = getPosFromArgs args
+  expType <- getExpType (getHeadFromArgs args)
   case expType of
     EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because builtin head function was applied to an empty list") pos
-    ListType hType -> return $ hType
+    ListType hType -> case getTailFromArgs args of
+                    Nothing -> return hType
+                    Just argsTail -> getTypeAfterApplication hType argsTail
     _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function head was applied to a non list type") pos
 
-getTypeAfterApplication EmptyFunType (ArgBase pos expr) = do
-  expType <- getExpType expr
+getTypeAfterApplication EmptyFunType args = do
+  let pos = getPosFromArgs args
+  expType <- getExpType (getHeadFromArgs args)
   case expType of
-    EmptyList -> return BoolType
-    ListType hType -> return BoolType
+    EmptyList -> partialApp
+    ListType _ -> partialApp
     _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function empty was applied to a non list type") pos
+  where
+    partialApp = case getTailFromArgs args of
+                  Nothing -> return BoolType
+                  Just argsTail -> getTypeAfterApplication BoolType argsTail
 
-getTypeAfterApplication TailFunType (ArgBase pos expr) = do
-  expType <- getExpType expr
+getTypeAfterApplication TailFunType args = do
+  let pos = getPosFromArgs args
+  expType <- getExpType (getHeadFromArgs args)
   case expType of
     EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because tail function was applied to an empty list") pos
-    ListType _ -> return $ expType
+    ListType _ -> case getTailFromArgs args of
+                    Nothing -> return expType
+                    Just argsTail -> getTypeAfterApplication expType argsTail
     _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function tail was applied to non list type") pos
 
-getTypeAfterApplication (FunType argType retType) (ArgBase pos expr) = do
-  expType <- getExpType expr
-  case hTypeEq argType expType of
-    True -> return retType
+getTypeAfterApplication (FunType argType retType) args = do
+  let pos = getPosFromArgs args
+  expType <- getExpType (getHeadFromArgs args)
+  case hTypeCouldBeEq argType expType of
+    True -> case getTailFromArgs args of
+              Nothing -> return retType
+              Just argsTail -> getTypeAfterApplication retType argsTail
     False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected \"" .
       shows argType . showString "\", but found \"" . shows expType . showString "\"") pos
 
-
-
-
-
-getTypeAfterApplication HeadFunType (ArgList pos expr args) = do
-  expType <- getExpType expr
-  case expType of
-    EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because builtin head function was applied to an empty list") pos
-    ListType hType -> getTypeAfterApplication hType args
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function head was applied to a non list type") pos
-
--- To się zawsze wywala
-getTypeAfterApplication EmptyFunType (ArgList pos expr args) = do
-  expType <- getExpType expr
-  case expType of
-    EmptyList -> getTypeAfterApplication BoolType args
-    ListType hType -> getTypeAfterApplication BoolType args
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function empty was applied to a non list type") pos
-
-getTypeAfterApplication TailFunType (ArgList pos expr args) = do
-  expType <- getExpType expr
-  case expType of
-    EmptyList -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Cannot deduce type, because tail function was applied to an empty list") pos
-    ListType _ -> getTypeAfterApplication expType args
-    _ -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Builtin function tail was applied to non list type") pos
--- koniec wywalania
-
-
-
-
-
-
-
-
-getTypeAfterApplication (FunType argType retType) (ArgList pos expr args) = do
-  expType <- getExpType expr
-  case hTypeEq argType expType of
-    True -> getTypeAfterApplication retType args
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Type mismatch during function application, expected \"" .
-      shows argType . showString "\", but found \"" . shows expType . showString "\"") pos
-
-getTypeAfterApplication hType (ArgList pos _ _) = do
+getTypeAfterApplication hType args = do
   liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type \"" .
-    shows hType . showString "\", which is not a functional type") pos
-
-getTypeAfterApplication hType (ArgBase pos _) = do
-  liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Trying to apply value of type \"" .
-    shows hType . showString "\", which is not a functional type") pos
+    shows hType . showString "\", which is not a functional type") (getPosFromArgs args)

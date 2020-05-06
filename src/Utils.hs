@@ -27,3 +27,15 @@ allPairsEqual eqFun (h:t) =
   case foldr (\elem acc -> acc && (eqFun elem h)) True t of
     False -> False
     True -> allPairsEqual eqFun t
+
+getPosFromArgs :: Args (Maybe (Int, Int)) -> Maybe (Int, Int)
+getPosFromArgs (ArgBase pos _) = pos
+getPosFromArgs (ArgList pos _ _) = pos
+
+getHeadFromArgs :: Args (Maybe (Int, Int)) -> Exp (Maybe (Int, Int))
+getHeadFromArgs (ArgBase _ expr) = expr
+getHeadFromArgs (ArgList _ expr _) = expr
+
+getTailFromArgs :: Args (Maybe (Int, Int)) -> Maybe (Args (Maybe (Int, Int)))
+getTailFromArgs (ArgBase _ _) = Nothing
+getTailFromArgs (ArgList _ _ args) = Just args

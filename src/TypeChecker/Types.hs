@@ -7,9 +7,7 @@ import Syntax.AbsSyntax
 
 
 type TypeEnv = M.Map Ident HathonType
-
--- Type checking monad
-type TCM = ReaderT TypeEnv (Either ShowS) ()
+type TCM = ReaderT TypeEnv (Either ShowS) () -- Type checking monad
 type TypeExpMonad = ReaderT TypeEnv (Either ShowS) HathonType
 
 -- We don't use Type a from AbsSyntax, because we don't need to
@@ -39,21 +37,21 @@ instance Show HathonType where
 
 -- Watch out! This relation is not transitive, because of non concrete types:
 -- [] == [Int] and [] == [Bool], but [Int] /= [Bool].
-hTypeEq :: HathonType -> HathonType -> Bool
-hTypeEq IntType IntType = True
-hTypeEq BoolType BoolType = True
-hTypeEq (FunType arg1 ret1) (FunType arg2 ret2) = (hTypeEq arg1 arg2) && (hTypeEq ret1 ret2)
-hTypeEq EmptyList (ListType _) = True
-hTypeEq (ListType _) EmptyList = True
-hTypeEq EmptyList EmptyList = True
-hTypeEq (ListType type1) (ListType type2) = hTypeEq type1 type2
-hTypeEq HeadFunType HeadFunType = True
-hTypeEq TailFunType TailFunType = True
-hTypeEq EmptyFunType EmptyFunType = True
-hTypeEq HeadFunType (FunType (ListType innerArg) ret) = hTypeEq innerArg ret
-hTypeEq EmptyFunType (FunType (ListType _) BoolType) = True
-hTypeEq TailFunType (FunType (ListType arg) (ListType ret)) = hTypeEq arg ret
-hTypeEq (FunType (ListType innerArg) ret) HeadFunType = hTypeEq innerArg ret
-hTypeEq (FunType (ListType _) BoolType) EmptyFunType = True
-hTypeEq (FunType (ListType arg) (ListType ret)) TailFunType = hTypeEq arg ret
-hTypeEq _ _ = False
+hTypeCouldBeEq :: HathonType -> HathonType -> Bool
+hTypeCouldBeEq IntType IntType = True
+hTypeCouldBeEq BoolType BoolType = True
+hTypeCouldBeEq (FunType arg1 ret1) (FunType arg2 ret2) = (hTypeCouldBeEq arg1 arg2) && (hTypeCouldBeEq ret1 ret2)
+hTypeCouldBeEq EmptyList (ListType _) = True
+hTypeCouldBeEq (ListType _) EmptyList = True
+hTypeCouldBeEq EmptyList EmptyList = True
+hTypeCouldBeEq (ListType type1) (ListType type2) = hTypeCouldBeEq type1 type2
+hTypeCouldBeEq HeadFunType HeadFunType = True
+hTypeCouldBeEq TailFunType TailFunType = True
+hTypeCouldBeEq EmptyFunType EmptyFunType = True
+hTypeCouldBeEq HeadFunType (FunType (ListType innerArg) ret) = hTypeCouldBeEq innerArg ret
+hTypeCouldBeEq EmptyFunType (FunType (ListType _) BoolType) = True
+hTypeCouldBeEq TailFunType (FunType (ListType arg) (ListType ret)) = hTypeCouldBeEq arg ret
+hTypeCouldBeEq (FunType (ListType innerArg) ret) HeadFunType = hTypeCouldBeEq innerArg ret
+hTypeCouldBeEq (FunType (ListType _) BoolType) EmptyFunType = True
+hTypeCouldBeEq (FunType (ListType arg) (ListType ret)) TailFunType = hTypeCouldBeEq arg ret
+hTypeCouldBeEq _ _ = False
