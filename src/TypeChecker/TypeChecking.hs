@@ -143,13 +143,11 @@ getExpType (ELet _ def@(DFun _ name _ _ _) expr) = do
 getExpType (ELambda pos lambdaType args expr) =
   getAndCheckDefType False (DFun pos lambdaName lambdaType args expr)
 
-getExpType (EEqu pos exp1 exp2) = getEqualityType pos exp1 exp2
-
-getExpType (ENeq pos exp1 exp2) = getEqualityType pos exp1 exp2
-
 getExpType (EOr pos exp1 exp2) = getBoolOpType pos exp1 exp2
 
 getExpType (EAnd pos exp1 exp2) = getBoolOpType pos exp1 exp2
+
+getExpType (EEqu pos exp1 exp2) = getEqualityType pos exp1 exp2
 
 getExpType (EGre pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
@@ -159,30 +157,7 @@ getExpType (ELes pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
 getExpType (ELeq pos exp1 exp2) = getComparisionOpType pos exp1 exp2
 
-getExpType (EInt _ _) = return IntType
-getExpType (ETrue _) = return BoolType
-getExpType (EFalse _) = return BoolType
-getExpType (EList _ []) = return EmptyList
-
-getExpType (EList pos elems) = do
-  listOfTypes <- mapM getExpType elems
-  case allPairsEqual hTypeCouldBeEq listOfTypes of
-    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Heterogeneous lists are not allowed, but found one") pos
-    True -> return $ ListType (getMostConcreteType listOfTypes)
-
-getExpType (EAdd pos exp1 exp2) = getArithmOpType pos exp1 exp2
-
-getExpType (ESub pos exp1 exp2) = getArithmOpType pos exp1 exp2
-
-getExpType (EMul pos exp1 exp2) = getArithmOpType pos exp1 exp2
-
-getExpType (EMod pos exp1 exp2) = getArithmOpType pos exp1 exp2
-
-getExpType (EDiv pos exp1 exp2) = getArithmOpType pos exp1 exp2
-
-getExpType (EBNeg pos expr) = getUnaryOpType pos expr BoolType BoolType
-
-getExpType (ENeg pos expr) = getUnaryOpType pos expr IntType IntType
+getExpType (ENeq pos exp1 exp2) = getEqualityType pos exp1 exp2
 
 getExpType (ELAppend pos exp1 exp2) = do
   type1 <- getExpType exp1
@@ -194,6 +169,31 @@ getExpType (ELAppend pos exp1 exp2) = do
     case type2 of
       EmptyList -> return $ ListType type1
       ListType innerType2 -> return $ ListType (getMostConcreteType [type1, innerType2])
+
+getExpType (ESub pos exp1 exp2) = getArithmOpType pos exp1 exp2
+
+getExpType (EAdd pos exp1 exp2) = getArithmOpType pos exp1 exp2
+
+getExpType (EDiv pos exp1 exp2) = getArithmOpType pos exp1 exp2
+
+getExpType (EMul pos exp1 exp2) = getArithmOpType pos exp1 exp2
+
+getExpType (EMod pos exp1 exp2) = getArithmOpType pos exp1 exp2
+
+getExpType (EBNeg pos expr) = getUnaryOpType pos expr BoolType BoolType
+
+getExpType (ENeg pos expr) = getUnaryOpType pos expr IntType IntType
+
+getExpType (EInt _ _) = return IntType
+getExpType (ETrue _) = return BoolType
+getExpType (EFalse _) = return BoolType
+getExpType (EList _ []) = return EmptyList
+
+getExpType (EList pos elems) = do
+  listOfTypes <- mapM getExpType elems
+  case allPairsEqual hTypeCouldBeEq listOfTypes of
+    False -> liftEither $ Left $ addPosInfoToErr (showString "TYPECHECKING ERROR: Heterogeneous lists are not allowed, but found one") pos
+    True -> return $ ListType (getMostConcreteType listOfTypes)
 
 getExpType (EVar pos (Ident name)) = do
   env <- ask
