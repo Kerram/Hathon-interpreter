@@ -11,6 +11,9 @@ import Utils
 import StackTrace
 
 
+-- In this module we often skip checking whether given expression if of correct
+-- type, because we had type checker done it.
+
 evalBooleanOp :: Exp (Maybe (Int, Int)) ->
                  Exp (Maybe (Int, Int)) ->
                  (Bool -> Bool -> Bool) ->
