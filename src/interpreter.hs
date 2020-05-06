@@ -7,11 +7,12 @@ import Control.Monad.Reader
 import Syntax.ParSyntax (pProg, myLexer)
 import Syntax.ErrM
 
+import TypeChecker.TypeChecking
+import TypeChecker.Predefined
+
 import Predefined
 import Eval
 import Utils
-import TypeChecker.TypeChecking
-import TypeChecker.Predefined
 import StackTrace
 
 

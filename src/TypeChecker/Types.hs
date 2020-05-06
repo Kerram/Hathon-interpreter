@@ -10,6 +10,7 @@ type TypeEnv = M.Map Ident HathonType
 type TCM = ReaderT TypeEnv (Either ShowS) () -- Type checking monad
 type TypeExpMonad = ReaderT TypeEnv (Either ShowS) HathonType
 
+-- Hathon is a name of the language.
 -- We don't use Type a from AbsSyntax, because we don't need to
 -- store information about positions in the source code and we need
 -- more types.
