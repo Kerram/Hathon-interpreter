@@ -10,7 +10,8 @@ import Syntax.ErrM
 import Predefined
 import Eval
 import Utils
-import TypeChecking
+import TypeChecker.TypeChecking
+import TypeChecker.Predefined
 import StackTrace
 
 
