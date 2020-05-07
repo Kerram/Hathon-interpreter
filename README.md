@@ -44,7 +44,7 @@ This version also contains a bug, but it is easily fixable.
 To compile interpreter simply type make (remember to write in the Makefile localization of your bnfc).
 To run interpreter type ./interpreter {filePath}, where {filePath} is a path to file containing source code in Hathon.
 
-Program is divided into 'instruction' separated by semicolons.
+Program is divided into 'instructions' separated by semicolons.
 Each 'instruction' is either a definition or an expression.
 Definition will add new name to the global environment, but expression will cause
 the interpreter to print its value to stdout.
