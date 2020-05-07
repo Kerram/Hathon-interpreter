@@ -13,6 +13,8 @@ import StackTrace
 
 -- In this module we often skip checking whether given expression if of correct
 -- type, because we had type checker done it.
+-- Some errors like undefined value will also be checked by type checker,
+-- but we detect them here for safety.
 
 evalBooleanOp :: Exp (Maybe (Int, Int)) ->
                  Exp (Maybe (Int, Int)) ->

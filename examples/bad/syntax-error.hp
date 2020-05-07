@@ -1,0 +1,5 @@
+def map :: ([Int] -> Int) -> [[Int]] -> [Int] fun l =
+  if empty l then
+    []
+  else
+    (fun (head l))::(map fun (tail l));  # Append is ':' not '::'.

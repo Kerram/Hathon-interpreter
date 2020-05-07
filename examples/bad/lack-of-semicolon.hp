@@ -1,0 +1,7 @@
+def f :: Int -> Int x = x + 1;
+
+
+f 1
+
+
+def x :: Int = 5;

@@ -1,0 +1,2 @@
+(let def fun :: Int -> Int x = x + 1 in
+  fun) 10;

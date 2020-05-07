@@ -1,0 +1,4 @@
+def sum2 :: Int -> Int -> Int x y = x + y;
+
+sum 2 5;    # Works.
+(sum 2) 5;  # Does not work -- syntax error.

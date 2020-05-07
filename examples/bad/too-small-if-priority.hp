@@ -1,0 +1,6 @@
+2 == 1 + 1 && True || False == True || 2 == 3 || if a then True else 1;
+
+/*
+The following is parsable:
+2 == 1 + 1 && True || False == True || 2 == 3 || (if a then True else 1);
+*/

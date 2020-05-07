@@ -1,0 +1,6 @@
+def fun :: Int -> Int = (lambda :: Int -> Int . x -> x + 1);
+
+fun 10; # Works.
+
+# Syntax error during application.
+(lambda :: Int -> Int . x -> x + 1) 10;
