@@ -2,4 +2,4 @@
 *.o
 interpreter
 *.bak
-Makefile
+src/Makefile

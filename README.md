@@ -41,7 +41,7 @@ In order to provide positions of errors in the source code, non mainstream versi
 BNFC was used (in the mainstream there is a bug): https://github.com/BNFC/bnfc/tree/176-source-position.
 This version also contains a bug, but it is easily fixable.
 
-To compile interpreter simply type make.
+To compile interpreter simply type make (remember to write in the Makefile localization of your bnfc).
 To run interpreter type ./interpreter {filePath}, where {filePath} is a path to file containing source code in Hathon.
 
 Program is divided into 'instruction' separated by semicolons.
