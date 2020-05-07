@@ -1,4 +1,4 @@
-Simple (but first in the world) interpreter of Hathon language.
+Simple (but first in the world) interpreter of the Hathon language.
 
 Hathon is a pure functional language with syntax being a mix of Haskell (big part)
 and Python (smaller parts), hence the name.
